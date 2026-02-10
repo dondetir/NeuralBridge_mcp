@@ -1,0 +1,31 @@
+# Ignore build artifacts and generated files
+
+# Rust
+**/target/
+**/*.rs.bk
+**/Cargo.lock
+
+# Android / Gradle
+**/.gradle/
+**/.cxx/
+**/build/
+**/.idea/
+**/*.apk
+**/*.aab
+
+# Protobuf generated
+**/generated/
+**/*.pb.kt
+**/*.pb.java
+**/*_pb2.py
+
+# IDE and temp files
+.vscode/
+**/*.swp
+**/*.swo
+*~
+.DS_Store
+**/*.log
+
+# Git
+.git/

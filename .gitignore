@@ -1,0 +1,211 @@
+# ==========================================
+# NeuralBridge - Multi-Language Repository
+# ==========================================
+
+# ------------------------------------------
+# Rust (mcp-server)
+# ------------------------------------------
+**/target/
+**/Cargo.lock
+**/src/protocol/generated/
+**/*.rs.bk
+**/*.pdb
+
+# ------------------------------------------
+# Android / Gradle (companion-app, test-app)
+# ------------------------------------------
+# Gradle
+**/.gradle/
+**/.kotlin/
+**/gradle-app.setting
+!gradle-wrapper.jar
+
+# Android Studio / IntelliJ
+**/.idea/
+**/.idea/*
+!**/.idea/codeStyles/
+!**/.idea/runConfigurations/
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+**/.idea/gradle.xml
+**/.idea/assetWizardSettings.xml
+**/.idea/dictionaries
+**/.idea/libraries
+**/.idea/caches
+**/.idea/modules.xml
+**/.idea/*.iml
+**/.idea/modules
+**/*.iml
+**/*.ipr
+**/*.iws
+**/captures/
+**/output.json
+
+# Build outputs
+**/build/
+**/out/
+**/.cxx/
+**/.externalNativeBuild
+**/local.properties
+
+# APK/Bundle files
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.jar
+!/gradle/wrapper/gradle-wrapper.jar
+
+# Signing files
+*.jks
+*.keystore
+keystore.properties
+
+# NDK
+**/obj/
+**/libs/armeabi-v7a/
+**/libs/arm64-v8a/
+**/libs/x86/
+**/libs/x86_64/
+
+# ------------------------------------------
+# Protobuf Generated Files
+# ------------------------------------------
+*.pb.kt
+*.pb.java
+*_pb2.py
+*_pb2.pyi
+**/companion-app/app/src/main/proto/
+
+# ------------------------------------------
+# Python (python-demo)
+# ------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+pythonenv*/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+wheels/
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ------------------------------------------
+# IDE / Editor Files
+# ------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.settings/
+.factorypath
+
+# JetBrains IDEs
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# ------------------------------------------
+# OS Files
+# ------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------
+# Logs & Temporary Files
+# ------------------------------------------
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.pid
+*.seed
+*.pid.lock
+
+# ------------------------------------------
+# Claude Code (per CLAUDE.md)
+# ------------------------------------------
+.claude/scratch/
+.claude/todos.md
+.claude/teams/
+
+# ------------------------------------------
+# Demo & Test Outputs
+# ------------------------------------------
+screenshots/*.jpg
+screenshots/*.png
+recordings/*.mp4
+test-results/
+performance-logs/
+
+# ------------------------------------------
+# Documentation (keep source, ignore generated)
+# ------------------------------------------
+# Keep all markdown files committed
+# Ignore generated docs if any
+docs/generated/
+
+# ------------------------------------------
+# Miscellaneous
+# ------------------------------------------
+*.bak
+*.cache
+*.diff
+*.err
+*.orig
+*.patch
+*.rej
+.sass-cache/
+*.css.map
+*.js.map
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

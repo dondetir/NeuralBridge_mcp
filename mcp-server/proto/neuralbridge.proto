@@ -1,0 +1,497 @@
+syntax = "proto3";
+
+package neuralbridge;
+
+// ============================================================================
+// PROTOCOL ENVELOPES
+// ============================================================================
+
+// Request envelope sent from MCP server to companion app
+message Request {
+  string request_id = 1;
+  oneof command {
+    // Observe commands
+    GetUITreeRequest get_ui_tree = 10;
+    ScreenshotRequest screenshot = 11;
+    FindElementsRequest find_elements = 12;
+    GetForegroundAppRequest get_foreground_app = 13;
+    GetNotificationsRequest get_notifications = 14;
+    GetClipboardRequest get_clipboard = 15;
+
+    // Act commands
+    TapRequest tap = 20;
+    LongPressRequest long_press = 21;
+    DoubleTapRequest double_tap = 22;
+    SwipeRequest swipe = 23;
+    FlingRequest fling = 24;
+    PinchRequest pinch = 25;
+    DragRequest drag = 26;
+    InputTextRequest input_text = 27;
+    PressKeyRequest press_key = 28;
+    GlobalActionRequest global_action = 29;
+    SetClipboardRequest set_clipboard = 30;
+
+    // Manage commands
+    LaunchAppRequest launch_app = 40;
+    CloseAppRequest close_app = 41;
+    ClearAppDataRequest clear_app_data = 42;
+    OpenUrlRequest open_url = 43;
+    SetOrientationRequest set_orientation = 44;
+
+    // Wait commands
+    WaitForElementRequest wait_for_element = 50;
+    WaitForGoneRequest wait_for_gone = 51;
+    WaitForIdleRequest wait_for_idle = 52;
+
+    // Event commands
+    EnableEventsRequest enable_events = 60;
+  }
+}
+
+// Response envelope sent from companion app to MCP server
+message Response {
+  string request_id = 1;
+  bool success = 2;
+  string error_message = 3;
+  ErrorCode error_code = 4;
+
+  oneof result {
+    UITree ui_tree = 10;
+    ScreenshotResult screenshot_result = 11;
+    ElementList element_list = 12;
+    AppInfo app_info = 13;
+    NotificationList notification_list = 14;
+    ClipboardContent clipboard_content = 15;
+
+    EmptyResult empty = 20;
+    BoolResult bool_result = 21;
+    StringResult string_result = 22;
+  }
+
+  int64 latency_ms = 100;
+}
+
+// Event pushed from companion app to MCP server
+message Event {
+  string event_id = 1;
+  int64 timestamp = 2;
+  EventType event_type = 3;
+
+  oneof data {
+    UIChangeEvent ui_change = 10;
+    NotificationEvent notification = 11;
+    ToastEvent toast = 12;
+    AppCrashEvent app_crash = 13;
+  }
+}
+
+// ============================================================================
+// OBSERVE REQUESTS & RESPONSES
+// ============================================================================
+
+message GetUITreeRequest {
+  bool include_invisible = 1;
+  bool include_webview = 2;
+  int32 max_depth = 3;  // 0 = unlimited
+}
+
+message UITree {
+  repeated UIElement elements = 1;
+  string foreground_app = 2;
+  DeviceInfo device_info = 3;
+  int32 total_nodes = 4;
+  int64 capture_timestamp = 5;
+}
+
+message UIElement {
+  string element_id = 1;  // Stable hash-based ID
+  string resource_id = 2;
+  string class_name = 3;
+  string text = 4;
+  string content_description = 5;
+  Bounds bounds = 6;
+  string parent_id = 7;
+  repeated string child_ids = 8;
+
+  bool visible = 10;
+  bool enabled = 11;
+  bool focusable = 12;
+  bool focused = 13;
+  bool clickable = 14;
+  bool long_clickable = 15;
+  bool scrollable = 16;
+  bool checkable = 17;
+  bool checked = 18;
+  bool selected = 19;
+
+  string semantic_type = 20;  // button, input, text, image, etc.
+  string ai_description = 21;  // Human-readable description for AI
+  int32 index_in_parent = 22;
+  int32 depth = 23;
+}
+
+message ScreenshotRequest {
+  ScreenshotQuality quality = 1;
+  bool use_adb_fallback = 2;
+}
+
+enum ScreenshotQuality {
+  QUALITY_UNSPECIFIED = 0;
+  FULL = 1;       // Quality 80, ~50KB
+  THUMBNAIL = 2;  // Quality 40, ~20KB
+}
+
+message ScreenshotResult {
+  bytes image_data = 1;  // JPEG bytes
+  int32 width = 2;
+  int32 height = 3;
+  ImageFormat format = 4;
+  int64 capture_time_ms = 5;
+}
+
+enum ImageFormat {
+  FORMAT_UNSPECIFIED = 0;
+  JPEG = 1;
+  PNG = 2;
+}
+
+message FindElementsRequest {
+  Selector selector = 1;
+  bool find_all = 2;  // false = return first match only
+  bool visible_only = 3;
+}
+
+message ElementList {
+  repeated UIElement elements = 1;
+  int32 total_matches = 2;
+}
+
+message GetForegroundAppRequest {}
+
+message AppInfo {
+  string package_name = 1;
+  string activity_name = 2;
+  bool is_launcher = 3;
+}
+
+message GetNotificationsRequest {
+  bool active_only = 1;
+}
+
+message NotificationList {
+  repeated NotificationInfo notifications = 1;
+}
+
+message NotificationInfo {
+  string package_name = 1;
+  string title = 2;
+  string text = 3;
+  int64 post_time = 4;
+  bool ongoing = 5;
+  bool clearable = 6;
+}
+
+message GetClipboardRequest {}
+
+message ClipboardContent {
+  string text = 1;
+  bool has_content = 2;
+}
+
+message EnableEventsRequest {
+  bool enable = 1;
+  repeated EventType event_types = 2;  // Empty = all events
+}
+
+// ============================================================================
+// ACT REQUESTS
+// ============================================================================
+
+message TapRequest {
+  oneof target {
+    Point coordinates = 1;
+    Selector selector = 2;
+  }
+}
+
+message LongPressRequest {
+  oneof target {
+    Point coordinates = 1;
+    Selector selector = 2;
+  }
+  int32 duration_ms = 3;  // Default 1000ms
+}
+
+message DoubleTapRequest {
+  oneof target {
+    Point coordinates = 1;
+    Selector selector = 2;
+  }
+}
+
+message SwipeRequest {
+  Point start = 1;
+  Point end = 2;
+  int32 duration_ms = 3;  // Faster = fling
+}
+
+message FlingRequest {
+  Direction direction = 1;
+}
+
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  UP = 1;
+  DOWN = 2;
+  LEFT = 3;
+  RIGHT = 4;
+}
+
+message PinchRequest {
+  Point center = 1;
+  float scale = 2;  // >1.0 = zoom in, <1.0 = zoom out
+  int32 duration_ms = 3;
+}
+
+message DragRequest {
+  Point from = 1;
+  Point to = 2;
+  int32 duration_ms = 3;
+}
+
+message InputTextRequest {
+  oneof target {
+    Selector selector = 1;
+    Point coordinates = 2;
+  }
+  string text = 3;
+  bool append = 4;  // false = replace existing text
+}
+
+message PressKeyRequest {
+  KeyCode key_code = 1;
+  bool with_meta = 2;
+  bool with_ctrl = 3;
+  bool with_alt = 4;
+  bool with_shift = 5;
+}
+
+enum KeyCode {
+  KEY_UNSPECIFIED = 0;
+  BACK = 4;
+  HOME = 3;
+  MENU = 82;
+  ENTER = 66;
+  DELETE = 67;
+  TAB = 61;
+  SPACE = 62;
+  VOLUME_UP = 24;
+  VOLUME_DOWN = 25;
+  POWER = 26;
+}
+
+message GlobalActionRequest {
+  GlobalAction action = 1;
+}
+
+enum GlobalAction {
+  ACTION_UNSPECIFIED = 0;
+  GLOBAL_BACK = 1;
+  GLOBAL_HOME = 2;
+  GLOBAL_RECENTS = 3;
+  GLOBAL_NOTIFICATIONS = 4;
+  GLOBAL_QUICK_SETTINGS = 5;
+  GLOBAL_LOCK_SCREEN = 8;
+  GLOBAL_TAKE_SCREENSHOT = 9;
+}
+
+message SetClipboardRequest {
+  string text = 1;
+}
+
+// ============================================================================
+// MANAGE REQUESTS
+// ============================================================================
+
+message LaunchAppRequest {
+  oneof target {
+    string package_name = 1;
+    string activity = 2;
+  }
+  bool clear_task = 3;
+}
+
+message CloseAppRequest {
+  string package_name = 1;
+  bool force = 2;  // Use ADB force-stop
+}
+
+message ClearAppDataRequest {
+  string package_name = 1;
+}
+
+message OpenUrlRequest {
+  string url = 1;
+  string browser_package = 2;  // Optional, use default if empty
+}
+
+message SetOrientationRequest {
+  Orientation orientation = 1;
+}
+
+enum Orientation {
+  ORIENTATION_UNSPECIFIED = 0;
+  PORTRAIT = 1;
+  LANDSCAPE = 2;
+  AUTO = 3;
+}
+
+// ============================================================================
+// WAIT REQUESTS
+// ============================================================================
+
+message WaitForElementRequest {
+  Selector selector = 1;
+  int32 timeout_ms = 2;
+  int32 poll_interval_ms = 3;
+}
+
+message WaitForGoneRequest {
+  Selector selector = 1;
+  int32 timeout_ms = 2;
+  int32 poll_interval_ms = 3;
+}
+
+message WaitForIdleRequest {
+  int32 timeout_ms = 1;
+}
+
+// ============================================================================
+// EVENTS
+// ============================================================================
+
+enum EventType {
+  EVENT_UNSPECIFIED = 0;
+  UI_CHANGE = 1;
+  NOTIFICATION_POSTED = 2;
+  TOAST_SHOWN = 3;
+  APP_CRASH = 4;
+}
+
+message UIChangeEvent {
+  string changed_element_id = 1;
+  ChangeType change_type = 2;
+}
+
+enum ChangeType {
+  CHANGE_UNSPECIFIED = 0;
+  CONTENT_CHANGED = 1;
+  WINDOW_CHANGED = 2;
+  SCROLLED = 3;
+}
+
+message NotificationEvent {
+  NotificationInfo notification = 1;
+}
+
+message ToastEvent {
+  string text = 1;
+}
+
+message AppCrashEvent {
+  string package_name = 1;
+  string stack_trace = 2;
+}
+
+// ============================================================================
+// COMMON DATA TYPES
+// ============================================================================
+
+message Selector {
+  string text = 1;              // Exact or partial text match
+  string content_desc = 2;      // Content description match
+  string resource_id = 3;       // Resource ID (suffix match)
+  string class_name = 4;        // Class name match
+  string element_id = 5;        // Direct element ID lookup
+
+  bool exact_match = 10;        // Require exact text match
+  bool visible_only = 11;       // Only match visible elements
+  bool enabled_only = 12;       // Only match enabled elements
+
+  // Boolean property filters (optional - when set, filter by these properties)
+  optional bool clickable = 13;      // Filter by clickable property
+  optional bool scrollable = 14;     // Filter by scrollable property
+  optional bool focusable = 15;      // Filter by focusable property
+  optional bool long_clickable = 16; // Filter by long_clickable property
+  optional bool checkable = 17;      // Filter by checkable property
+  optional bool checked = 18;        // Filter by checked property
+
+  int32 index = 20;             // Select Nth match (0-indexed)
+}
+
+message Point {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message Bounds {
+  int32 left = 1;
+  int32 top = 2;
+  int32 right = 3;
+  int32 bottom = 4;
+}
+
+message DeviceInfo {
+  string manufacturer = 1;
+  string model = 2;
+  string android_version = 3;
+  int32 sdk_int = 4;
+  int32 screen_width = 5;
+  int32 screen_height = 6;
+  int32 density_dpi = 7;
+}
+
+message EmptyResult {}
+
+message BoolResult {
+  bool value = 1;
+}
+
+message StringResult {
+  string value = 1;
+}
+
+// ============================================================================
+// ERROR CODES
+// ============================================================================
+
+enum ErrorCode {
+  ERROR_UNSPECIFIED = 0;
+
+  // Element errors
+  ELEMENT_NOT_FOUND = 100;
+  ELEMENT_NOT_VISIBLE = 101;
+  ELEMENT_NOT_ENABLED = 102;
+  ELEMENT_AMBIGUOUS = 103;
+
+  // Action errors
+  GESTURE_FAILED = 200;
+  INPUT_FAILED = 201;
+  PERMISSION_DENIED = 202;
+
+  // App errors
+  APP_NOT_INSTALLED = 300;
+  APP_CRASHED = 301;
+  ACTIVITY_NOT_FOUND = 302;
+
+  // System errors
+  TIMEOUT = 400;
+  DEVICE_LOCKED = 401;
+  SERVICE_NOT_CONNECTED = 402;
+  ADB_ERROR = 403;
+
+  // Protocol errors
+  INVALID_REQUEST = 500;
+  UNSUPPORTED_OPERATION = 501;
+  INTERNAL_ERROR = 502;
+}
