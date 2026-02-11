@@ -71,6 +71,31 @@ class ScreenshotPipeline(
     }
 
     /**
+     * Check if MediaProjection permission is granted
+     */
+    fun hasMediaProjectionPermission(): Boolean {
+        return mediaProjection != null
+    }
+
+    /**
+     * Request MediaProjection permission (launches consent dialog)
+     *
+     * This should be called on app startup to pre-request permission.
+     * @return true if permission was granted, false if denied
+     */
+    suspend fun requestMediaProjectionPermission(): Boolean {
+        return try {
+            val projection = initializeMediaProjection()
+            mediaProjection = projection
+            Log.i(TAG, "MediaProjection permission granted")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaProjection permission denied: ${e.message}")
+            false
+        }
+    }
+
+    /**
      * Capture screenshot
      *
      * @param quality JPEG quality level

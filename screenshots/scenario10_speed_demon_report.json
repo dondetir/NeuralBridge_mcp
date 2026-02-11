@@ -1,0 +1,44 @@
+{
+  "timestamp": "2026-02-10T22:54:11.946736",
+  "total_operations": 100,
+  "total_duration_seconds": 26.564814,
+  "throughput_ops_per_sec": 3.7643779474608783,
+  "operation_types": {
+    "tap_speed_test": {
+      "count": 25,
+      "avg_ms": 55.9608,
+      "p50_ms": 53.839999999999996,
+      "p95_ms": 63.874,
+      "p99_ms": 96.19,
+      "min_ms": 52.952,
+      "max_ms": 96.19
+    },
+    "ui_tree_speed_test": {
+      "count": 25,
+      "avg_ms": 7.6888,
+      "p50_ms": 7.391,
+      "p95_ms": 9.457,
+      "p99_ms": 10.671,
+      "min_ms": 6.567,
+      "max_ms": 10.671
+    },
+    "screenshot_speed_test": {
+      "count": 25,
+      "avg_ms": 792.94992,
+      "p50_ms": 778.053,
+      "p95_ms": 947.88,
+      "p99_ms": 952.905,
+      "min_ms": 763.0649999999999,
+      "max_ms": 952.905
+    },
+    "foreground_app_speed_test": {
+      "count": 25,
+      "avg_ms": 4.72904,
+      "p50_ms": 2.85,
+      "p95_ms": 10.084,
+      "p99_ms": 37.89,
+      "min_ms": 2.6189999999999998,
+      "max_ms": 37.89
+    }
+  }
+}

@@ -25,18 +25,24 @@ from .scenarios.scenario_4_events import run_scenario_4_events
 from .scenarios.scenario_5_clipboard import run_scenario_5_clipboard
 from .scenarios.scenario_6_app_lifecycle import run_scenario_6_app_lifecycle
 from .scenarios.scenario_7_stress_test import run_scenario_7_stress_test
+from .scenarios.scenario_8_smart_explorer import run_scenario_8_smart_explorer
+from .scenarios.scenario_9_shopping import run_scenario_9_shopping
+from .scenarios.scenario_10_speed_demon import run_scenario_10_speed_demon
 from .utils.logger import console, setup_logger
 from .utils.performance import LatencyTracker
 
 # Scenario registry
 SCENARIOS = {
     1: ("UI Inspection & Navigation", "~2 min", run_scenario_1_basics),
-    2: ("Form Automation", "~3 min", run_scenario_2_forms),
-    3: ("Advanced Gestures", "~2 min", run_scenario_3_gestures),
+    2: ("📝 Adaptive Form Filling", "~3 min", run_scenario_2_forms),
+    3: ("🎨 Gesture Showcase with Context", "~2 min", run_scenario_3_gestures),
     4: ("Event Streaming", "~2 min", run_scenario_4_events),
     5: ("Clipboard Operations", "~1 min", run_scenario_5_clipboard),
     6: ("App Lifecycle Management", "~2 min", run_scenario_6_app_lifecycle),
     7: ("Performance Stress Test", "~1 min", run_scenario_7_stress_test),
+    8: ("🧭 Smart App Explorer (AI)", "~3 min", run_scenario_8_smart_explorer),
+    9: ("🛒 E-commerce Shopping Journey", "~4 min", run_scenario_9_shopping),
+    10: ("⚡ Speed Demon Challenge", "~2 min", run_scenario_10_speed_demon),
 }
 
 
@@ -46,9 +52,9 @@ def print_banner():
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
 ║        NeuralBridge Python MCP Demo Client               ║
-║        Phase 1+2 Feature Showcase                        ║
+║        10 Stunning Scenarios | AI-Native Automation      ║
 ║                                                           ║
-║        24 MCP Tools | <100ms Latency | AI-Native         ║
+║        24 MCP Tools | <100ms Latency | Phase 1+2         ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     """
@@ -71,13 +77,13 @@ def print_scenario_menu():
     """Print interactive scenario selection menu."""
     table = Table(title="Available Scenarios", show_header=True, header_style="bold magenta")
     table.add_column("#", style="cyan", width=3)
-    table.add_column("Scenario", style="green", width=35)
+    table.add_column("Scenario", style="green", width=45)
     table.add_column("Duration", style="yellow", width=10)
 
     for num, (name, duration, _) in SCENARIOS.items():
         table.add_row(str(num), name, duration)
 
-    table.add_row("8", "[bold]Run All Scenarios[/bold]", "~13 min")
+    table.add_row("11", "[bold]Run All Scenarios[/bold]", "~22 min")
     table.add_row("0", "Exit", "")
 
     console.print("\n")
@@ -94,7 +100,7 @@ async def run_scenario(
     """Run a single scenario.
 
     Args:
-        scenario_num: Scenario number (1-7)
+        scenario_num: Scenario number (1-10)
         client: AndroidClient instance
         tracker: LatencyTracker for performance measurement
         screenshot_dir: Directory to save screenshots
@@ -134,12 +140,12 @@ async def run_all_scenarios(
     Returns:
         Dictionary with scenario results
     """
-    console.print("\n[bold cyan]Running All Scenarios (1-7)[/bold cyan]\n")
+    console.print("\n[bold cyan]Running All Scenarios (1-10)[/bold cyan]\n")
 
     start_time = datetime.now()
     results = {}
 
-    for scenario_num in range(1, 8):
+    for scenario_num in range(1, 11):
         scenario_start = datetime.now()
         passed = await run_scenario(scenario_num, client, tracker, screenshot_dir)
         scenario_end = datetime.now()
@@ -165,7 +171,7 @@ async def run_all_scenarios(
 
     # Results table
     summary_table = Table(title="Scenario Results", show_header=True, header_style="bold magenta")
-    summary_table.add_column("Scenario", style="green", width=35)
+    summary_table.add_column("Scenario", style="green", width=45)
     summary_table.add_column("Result", style="cyan", width=10)
     summary_table.add_column("Duration", style="yellow", width=15)
 
@@ -187,8 +193,8 @@ async def run_all_scenarios(
 
     # Overall stats
     console.print(f"\n[bold]Overall Statistics:[/bold]")
-    console.print(f"  Scenarios Run: [cyan]{len(results)}/7[/cyan]")
-    console.print(f"  Success Rate: [{'green' if passed_count == 7 else 'yellow'}]{passed_count}/{len(results)} ({passed_count/len(results)*100:.0f}%)[/{'green' if passed_count == 7 else 'yellow'}]")
+    console.print(f"  Scenarios Run: [cyan]{len(results)}/10[/cyan]")
+    console.print(f"  Success Rate: [{'green' if passed_count == 10 else 'yellow'}]{passed_count}/{len(results)} ({passed_count/len(results)*100:.0f}%)[/{'green' if passed_count == 10 else 'yellow'}]")
     console.print(f"  Total Time: [cyan]{total_duration/60:.1f}m {total_duration%60:.0f}s[/cyan]")
 
     # Screenshots
@@ -257,7 +263,7 @@ async def interactive_mode(
             try:
                 choice = IntPrompt.ask(
                     "[bold cyan]Select scenario[/bold cyan]",
-                    choices=[str(i) for i in range(9)],
+                    choices=[str(i) for i in range(12)],
                     default=0
                 )
             except KeyboardInterrupt:
@@ -267,7 +273,7 @@ async def interactive_mode(
             if choice == 0:
                 console.print("\n[bold cyan]Exiting demo. Thank you![/bold cyan]")
                 break
-            elif choice == 8:
+            elif choice == 11:
                 # Run all scenarios
                 await run_all_scenarios(client, tracker, screenshot_dir)
                 break  # Exit after running all
@@ -305,7 +311,7 @@ async def interactive_mode(
 @click.option(
     "--scenario",
     type=int,
-    help="Run specific scenario (1-7)"
+    help="Run specific scenario (1-10)"
 )
 @click.option(
     "--all",

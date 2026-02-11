@@ -1238,9 +1238,16 @@ class CommandHandler(
 
         try {
             val packageManager = accessibilityService.packageManager
-            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
 
-            if (launchIntent == null) {
+            // FIXED: First verify the package is actually installed
+            val isInstalled = try {
+                packageManager.getPackageInfo(packageName, 0)
+                true
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                false
+            }
+
+            if (!isInstalled) {
                 return buildErrorResponse(
                     requestId = requestId,
                     errorCode = Neuralbridge.ErrorCode.APP_NOT_INSTALLED,
@@ -1248,6 +1255,53 @@ class CommandHandler(
                 )
             }
 
+            // Try to get launch intent
+            var launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+
+            // FIXED: If getLaunchIntentForPackage returns null but app is installed,
+            // create intent manually using the MAIN/LAUNCHER activity
+            if (launchIntent == null) {
+                Log.d(TAG, "getLaunchIntentForPackage returned null, trying manual intent creation")
+
+                try {
+                    // Query for MAIN/LAUNCHER activities with proper flags
+                    val mainIntent = android.content.Intent(android.content.Intent.ACTION_MAIN, null)
+                    mainIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+                    mainIntent.setPackage(packageName)
+
+                    val resolveInfoList = packageManager.queryIntentActivities(
+                        mainIntent,
+                        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+                    )
+
+                    if (resolveInfoList.isNotEmpty()) {
+                        val resolveInfo = resolveInfoList[0]
+                        val activityName = resolveInfo.activityInfo.name
+
+                        Log.d(TAG, "Found launcher activity: $activityName")
+
+                        launchIntent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                        launchIntent.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+                        launchIntent.setClassName(packageName, activityName)
+                    } else {
+                        Log.w(TAG, "No launcher activities found for $packageName")
+                        return buildErrorResponse(
+                            requestId = requestId,
+                            errorCode = Neuralbridge.ErrorCode.ERROR_UNSPECIFIED,
+                            errorMessage = "App installed but has no launcher activity: $packageName"
+                        )
+                    }
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "SecurityException querying activities for $packageName", e)
+                    return buildErrorResponse(
+                        requestId = requestId,
+                        errorCode = Neuralbridge.ErrorCode.ERROR_UNSPECIFIED,
+                        errorMessage = "Permission denied accessing $packageName"
+                    )
+                }
+            }
+
+            // Set flags
             if (request.clearTask) {
                 launchIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
             } else {
@@ -1265,6 +1319,7 @@ class CommandHandler(
                 .build()
 
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch app $packageName", e)
             return buildErrorResponse(
                 requestId = requestId,
                 errorCode = Neuralbridge.ErrorCode.ERROR_UNSPECIFIED,

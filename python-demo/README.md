@@ -8,14 +8,15 @@
 
 ## Overview
 
-This Python MCP demo client showcases NeuralBridge's Android automation capabilities through 7 interactive scenarios. It uses the official MCP Python SDK to communicate with the Rust MCP server, demonstrating how AI agents will integrate with NeuralBridge in production.
+This Python MCP demo client showcases NeuralBridge's Android automation capabilities through **10 stunning interactive scenarios**. It uses the official MCP Python SDK to communicate with the Rust MCP server, demonstrating how AI agents will integrate with NeuralBridge in production.
 
 **Key Features:**
 - ✅ All 24 MCP tools (16 Phase 1 + 8 Phase 2)
+- ✅ 10 diverse scenarios: AI intelligence, real-world workflows, technical excellence
 - ✅ <100ms latency validation for fast-path operations
 - ✅ Beautiful terminal UI with rich formatting
 - ✅ Interactive scenario selection
-- ✅ Performance tracking and reporting
+- ✅ Performance tracking and reporting (P50/P95/P99)
 - ✅ Screenshot capture and saving
 
 ## Quick Start
@@ -71,26 +72,29 @@ Demonstrates basic observation and gesture tools:
 - Tap gestures
 - Hardware key presses
 
-### Scenario 2: Form Automation (~3 min)
-**Tools:** `launch_app`, `wait_for_element`, `input_text`, `tap`, `wait_for_idle`
+### Scenario 2: 📝 Adaptive Form Filling (~3 min) **[ENHANCED]**
+**Tools:** `launch_app`, `open_url`, `wait_for_element`, `input_text`, `tap`, `get_ui_tree`
 
-Demonstrates app automation workflows:
-- Launch Settings app
-- Wait for UI to stabilize
-- Navigate to Wi-Fi settings
-- Form filling simulation
-- Screenshot capture
+Demonstrates intelligent form automation:
+- Launch Chrome browser
+- Navigate to web form (W3Schools HTML forms)
+- Detect and classify form fields dynamically
+- Fill multiple field types (name, email, phone, message)
+- Handle form submission and verification
+- Graceful fallback to Settings if browser unavailable
 
-### Scenario 3: Advanced Gestures (~2 min)
-**Tools:** `double_tap`, `pinch`, `drag`, `fling`, `swipe`, `long_press`
+### Scenario 3: 🎨 Gesture Showcase with Context (~2 min) **[ENHANCED]**
+**Tools:** `double_tap`, `pinch`, `drag`, `fling`, `swipe`, `long_press`, `tap`, `screenshot`
 
-Demonstrates Phase 2 advanced gestures:
-- Double tap to zoom
-- Pinch zoom (in/out)
-- Drag gestures
-- Fling scrolling
-- Swipe navigation
-- Long press context menus
+Demonstrates all 8 gestures in realistic app context:
+- Launch Google Photos for gesture context
+- Navigate photos with swipes
+- Zoom photos with double-tap and pinch
+- Pan zoomed view with drag
+- Open context menu with long-press
+- Fast scroll with fling
+- Visual before/after screenshots
+- Graceful fallback to generic gestures if Photos unavailable
 
 ### Scenario 4: Event Streaming (~2 min)
 **Tools:** `enable_events`, `get_notifications`, `open_url`
@@ -128,6 +132,44 @@ Validates <100ms latency target:
 - P50, P95, P99 latency measurements
 - Performance summary report
 
+### Scenario 8: 🧭 Smart App Explorer (AI Intelligence Tier) (~3 min) **[NEW]**
+**Tools:** `launch_app`, `get_ui_tree`, `find_elements`, `tap`, `screenshot`, `press_key`, `wait_for_idle`
+
+Demonstrates AI-native autonomous discovery:
+- Launch Clock app for exploration
+- Initial reconnaissance (analyze UI structure)
+- Discover all interactive elements automatically
+- Intelligent element selection and navigation
+- Adaptive behavior (backtrack when stuck, avoid loops)
+- Build exploration map with breadcrumb trail
+- Track visited screens and key features
+- Summary: screens explored, elements discovered, navigation depth
+
+### Scenario 9: 🛒 E-commerce Shopping Journey (Real-World Workflow) (~4 min) **[NEW]**
+**Tools:** `launch_app`, `open_url`, `wait_for_element`, `input_text`, `tap`, `fling`, `get_ui_tree`, `screenshot`, `press_key`
+
+Demonstrates complex multi-step real-world workflow:
+- Launch Chrome and navigate to Amazon
+- Search for products ("wireless headphones")
+- Browse product results with scrolling
+- Extract product information (titles, prices)
+- View product details (tap, navigate)
+- Compare multiple products
+- Display comparison table
+- Practical use case that non-technical audiences understand
+
+### Scenario 10: ⚡ Speed Demon Challenge (Technical Excellence) (~2 min) **[NEW]**
+**Tools:** `tap`, `get_ui_tree`, `screenshot`, `get_foreground_app` (stress testing)
+
+Showcases <100ms latency performance:
+- Execute 100 mixed operations (4 types × 25 each)
+- Real-time progress tracking
+- Performance analysis: Avg, P50, P95, P99, Min, Max
+- Color-coded results (✅ PASS if P95 < 100ms)
+- Comparison with UIAutomator2 (200-500ms typical)
+- Detailed performance report saved to JSON
+- Engineering bragging rights for technical audiences
+
 ## Usage Examples
 
 ### Interactive Mode (Default)
@@ -139,8 +181,8 @@ Interactive menu allows selecting individual scenarios or running all.
 
 ### Headless Mode (Coming Soon)
 ```bash
-# Run specific scenario
-python -m demo_client.main --scenario 7
+# Run specific scenario (1-10)
+python -m demo_client.main --scenario 10
 
 # Run all scenarios
 python -m demo_client.main --all
@@ -223,17 +265,20 @@ python-demo/
 ├── requirements.txt                  # Python dependencies
 ├── demo_client/
 │   ├── __init__.py
-│   ├── main.py                      # CLI entry point
+│   ├── main.py                      # CLI entry point (10 scenarios)
 │   ├── mcp_client.py                # MCP SDK wrapper
 │   ├── android_client.py            # High-level Android API (24 tools)
 │   ├── scenarios/
 │   │   ├── scenario_1_basics.py
-│   │   ├── scenario_2_forms.py
-│   │   ├── scenario_3_gestures.py
+│   │   ├── scenario_2_forms.py            # Enhanced: Adaptive form filling
+│   │   ├── scenario_3_gestures.py         # Enhanced: Gesture showcase with context
 │   │   ├── scenario_4_events.py
 │   │   ├── scenario_5_clipboard.py
 │   │   ├── scenario_6_app_lifecycle.py
-│   │   └── scenario_7_stress_test.py
+│   │   ├── scenario_7_stress_test.py
+│   │   ├── scenario_8_smart_explorer.py   # NEW: AI autonomous exploration
+│   │   ├── scenario_9_shopping.py         # NEW: E-commerce workflow
+│   │   └── scenario_10_speed_demon.py     # NEW: Performance challenge
 │   └── utils/
 │       ├── logger.py                # Structured logging
 │       └── performance.py           # Latency measurement

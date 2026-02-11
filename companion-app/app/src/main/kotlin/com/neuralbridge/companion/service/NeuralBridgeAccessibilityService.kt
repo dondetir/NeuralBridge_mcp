@@ -92,6 +92,9 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
         // Start foreground service
         startForegroundService()
 
+        // Request MediaProjection permission for fast screenshots
+        requestMediaProjectionPermission()
+
         Log.i(TAG, "NeuralBridge service fully initialized")
     }
 
@@ -154,6 +157,50 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
         }
 
         Log.d(TAG, "Foreground service started")
+    }
+
+    /**
+     * Request MediaProjection permission for fast screenshot capture
+     *
+     * This is called on service startup to pre-request permission so that
+     * screenshots use the fast path (60ms) instead of ADB fallback (200ms).
+     *
+     * On Android 14+, this permission is single-use and expires when the
+     * app process is killed or device restarts.
+     */
+    private fun requestMediaProjectionPermission() {
+        // Check if already granted
+        if (screenshotPipeline.hasMediaProjectionPermission()) {
+            Log.i(TAG, "MediaProjection permission already granted")
+            return
+        }
+
+        // Request permission asynchronously
+        serviceScope.launch {
+            delay(1000) // Wait 1 second after service startup before showing dialog
+
+            val granted = screenshotPipeline.requestMediaProjectionPermission()
+
+            if (granted) {
+                Log.i(TAG, "MediaProjection permission granted - fast screenshots enabled")
+                updateNotificationForFastScreenshots()
+            } else {
+                Log.w(TAG, "MediaProjection permission denied - using ADB fallback for screenshots")
+            }
+        }
+    }
+
+    /**
+     * Update notification to indicate fast screenshots are enabled
+     */
+    private fun updateNotificationForFastScreenshots() {
+        val notification = buildNotification(
+            title = getString(R.string.foreground_service_title),
+            message = "Fast screenshots enabled (60ms)"
+        )
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
     /**
