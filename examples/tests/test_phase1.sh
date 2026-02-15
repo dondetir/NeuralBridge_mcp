@@ -5,8 +5,9 @@
 set -e
 
 DEVICE="emulator-5554"
-MCP_SERVER="/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp"
-ADB="/home/rdondeti/Android/Sdk/platform-tools/adb"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MCP_SERVER="$SCRIPT_DIR/mcp-server/target/release/neuralbridge-mcp"
+ADB="$HOME/Android/Sdk/platform-tools/adb"
 
 echo "========================================"
 echo "Phase 1 E2E Test Suite"

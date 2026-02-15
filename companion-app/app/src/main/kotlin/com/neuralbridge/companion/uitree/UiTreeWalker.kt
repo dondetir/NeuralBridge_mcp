@@ -27,6 +27,7 @@ class UiTreeWalker(
 ) {
     companion object {
         private const val TAG = "UiTreeWalker"
+        private const val MAX_RECURSION_DEPTH = 50
 
         // Semantic type classifications
         private val BUTTON_CLASSES = setOf(
@@ -133,6 +134,12 @@ class UiTreeWalker(
         totalNodes: () -> Unit
     ) {
         totalNodes()
+
+        // Enforce maximum recursion depth for security
+        if (depth >= MAX_RECURSION_DEPTH) {
+            Log.w(TAG, "Maximum recursion depth ($MAX_RECURSION_DEPTH) reached, stopping tree walk")
+            return
+        }
 
         // Check depth limit
         if (maxDepth > 0 && depth >= maxDepth) {

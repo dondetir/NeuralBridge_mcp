@@ -49,7 +49,7 @@ fi
 echo ""
 
 # ADB path
-ADB="/home/rdondeti/Android/Sdk/platform-tools/adb"
+ADB="$HOME/Android/Sdk/platform-tools/adb"
 
 # Check emulator
 echo "Checking emulator status..."

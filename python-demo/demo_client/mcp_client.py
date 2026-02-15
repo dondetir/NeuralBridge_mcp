@@ -112,16 +112,30 @@ class NeuralBridgeMCPClient:
 
             # Create server parameters with Android SDK environment
             import os
+            from pathlib import Path
             env = os.environ.copy()
             # Set ANDROID_HOME for ADB discovery
             if "ANDROID_HOME" not in env:
-                android_sdk_path = "/home/rdondeti/Android/Sdk"
-                env["ANDROID_HOME"] = android_sdk_path
-                # Add platform-tools to PATH
-                if "PATH" in env:
-                    env["PATH"] = f"{android_sdk_path}/platform-tools:{env['PATH']}"
-                else:
-                    env["PATH"] = f"{android_sdk_path}/platform-tools"
+                # Try common Android SDK locations
+                home = Path.home()
+                candidates = [
+                    home / "Android" / "Sdk",
+                    home / "Library" / "Android" / "sdk",
+                    Path("/opt/android-sdk")
+                ]
+                android_sdk_path = None
+                for p in candidates:
+                    if p.exists():
+                        android_sdk_path = str(p)
+                        break
+
+                if android_sdk_path:
+                    env["ANDROID_HOME"] = android_sdk_path
+                    # Add platform-tools to PATH
+                    if "PATH" in env:
+                        env["PATH"] = f"{android_sdk_path}/platform-tools:{env['PATH']}"
+                    else:
+                        env["PATH"] = f"{android_sdk_path}/platform-tools"
 
             server_params = StdioServerParameters(
                 command=str(self.server_path),

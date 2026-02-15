@@ -14,7 +14,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-ADB="/home/rdondeti/Android/Sdk/platform-tools/adb"
+ADB="$HOME/Android/Sdk/platform-tools/adb"
 
 # Check 1: Emulator connected
 echo "1. Checking emulator connection..."
@@ -59,7 +59,8 @@ echo -e "   ${GREEN}✅ Port forwarding configured${NC}"
 
 # Check 6: TCP connection test
 echo "6. Testing TCP connection..."
-if timeout 5 python3 /home/rdondeti/Code/Android/neuralBridge/test_connection.py > /dev/null 2>&1; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if timeout 5 python3 "$SCRIPT_DIR/test_connection.py" > /dev/null 2>&1; then
     echo -e "   ${GREEN}✅ TCP connection successful${NC}"
 else
     echo -e "   ${RED}✗ TCP connection failed${NC}"
@@ -77,16 +78,16 @@ fi
 
 # Check 8: Build status
 echo "8. Checking build artifacts..."
-if [ -f "/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp" ]; then
-    SIZE=$(du -h /home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp | cut -f1)
+if [ -f "$SCRIPT_DIR/mcp-server/target/release/neuralbridge-mcp" ]; then
+    SIZE=$(du -h "$SCRIPT_DIR/mcp-server/target/release/neuralbridge-mcp" | cut -f1)
     echo -e "   ${GREEN}✅ MCP server binary exists ($SIZE)${NC}"
 else
     echo -e "   ${RED}✗ MCP server binary not found${NC}"
     exit 1
 fi
 
-if [ -f "/home/rdondeti/Code/Android/neuralBridge/companion-app/app/build/outputs/apk/debug/app-debug.apk" ]; then
-    SIZE=$(du -h /home/rdondeti/Code/Android/neuralBridge/companion-app/app/build/outputs/apk/debug/app-debug.apk | cut -f1)
+if [ -f "$SCRIPT_DIR/companion-app/app/build/outputs/apk/debug/app-debug.apk" ]; then
+    SIZE=$(du -h "$SCRIPT_DIR/companion-app/app/build/outputs/apk/debug/app-debug.apk" | cut -f1)
     echo -e "   ${GREEN}✅ Companion APK exists ($SIZE)${NC}"
 else
     echo -e "   ${YELLOW}⚠️  Companion APK not found (may need rebuild)${NC}"

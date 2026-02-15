@@ -18,7 +18,7 @@ cd companion-app && ./gradlew assembleDebug
 # Result: ✅ BUILD SUCCESSFUL in 46s
 
 # ADB
-/home/rdondeti/Android/Sdk/platform-tools/adb --version
+~/Android/Sdk/platform-tools/adb --version
 # Result: ✅ Version 1.0.41 (36.0.2-14143358)
 ```
 
@@ -54,20 +54,20 @@ cd companion-app && ./gradlew assembleDebug
 | cargo | 1.91.1 | /usr/bin/cargo | ✅ |
 | rustc | 1.91.1 | /usr/bin/rustc | ✅ |
 | gradle | 8.9 | system | ✅ |
-| adb | 1.0.41 | /home/rdondeti/Android/Sdk/platform-tools/adb | ⚠️ Not in PATH |
+| adb | 1.0.41 | ~/Android/Sdk/platform-tools/adb | ⚠️ Not in PATH |
 
 ### ADB Configuration
-**Full Path:** `/home/rdondeti/Android/Sdk/platform-tools/adb`
+**Full Path:** `~/Android/Sdk/platform-tools/adb`
 
 **Add to PATH (optional):**
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-export PATH="$PATH:/home/rdondeti/Android/Sdk/platform-tools"
+export PATH="$PATH:$HOME/Android/Sdk/platform-tools"
 ```
 
 **Current Device Status:**
 ```bash
-$ /home/rdondeti/Android/Sdk/platform-tools/adb devices
+$ ~/Android/Sdk/platform-tools/adb devices
 List of devices attached
 # No devices currently connected (normal)
 ```
@@ -106,7 +106,7 @@ List of devices attached
 
 ### ⚠️ ADB Not in PATH
 - **Impact:** Must use full path for ADB commands
-- **Workaround:** Use `/home/rdondeti/Android/Sdk/platform-tools/adb`
+- **Workaround:** Use `~/Android/Sdk/platform-tools/adb`
 - **Permanent Fix:** Add to PATH (optional)
 
 ### 🟢 No Devices Connected
@@ -127,7 +127,7 @@ Run these to verify current status:
 
 ```bash
 # Navigate to project root
-cd /home/rdondeti/Code/Android/neuralBridge
+cd ~/Code/Android/neuralBridge
 
 # Verify Rust build
 cd mcp-server
@@ -141,8 +141,8 @@ cd ../companion-app
 ls -lh app/build/outputs/apk/debug/app-debug.apk
 
 # Verify ADB
-/home/rdondeti/Android/Sdk/platform-tools/adb --version
-/home/rdondeti/Android/Sdk/platform-tools/adb devices
+~/Android/Sdk/platform-tools/adb --version
+~/Android/Sdk/platform-tools/adb devices
 
 # Check protoc
 protoc --version
@@ -165,7 +165,7 @@ Ready to implement remaining 13 tools and advanced features
 
 ### Optional: Initialize Git
 ```bash
-cd /home/rdondeti/Code/Android/neuralBridge
+cd ~/Code/Android/neuralBridge
 git init
 git add .
 git commit -m "Phase 1 Week 2: Foundation complete

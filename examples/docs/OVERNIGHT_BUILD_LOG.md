@@ -218,7 +218,7 @@ The following were intentionally skipped as they require build verification or r
 ### 1. Quick Verification (10 minutes)
 
 ```bash
-cd /home/rdondeti/Code/Android/neuralBridge
+cd ~/Code/Android/neuralBridge
 
 # Check file count
 find . -type f -name "*.rs" -o -name "*.kt" | wc -l

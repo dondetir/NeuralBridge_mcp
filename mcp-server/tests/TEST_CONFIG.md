@@ -17,7 +17,7 @@
 
 ## ADB Configuration
 
-- **ADB Path:** `/home/rdondeti/Android/Sdk/platform-tools/adb`
+- **ADB Path:** `~/Android/Sdk/platform-tools/adb`
 - **Port Forwarding:** ✅ Active
   - Forward rule: `tcp:38472 → tcp:38472`
 

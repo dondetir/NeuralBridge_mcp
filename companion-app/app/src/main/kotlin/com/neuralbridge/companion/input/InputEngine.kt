@@ -23,6 +23,7 @@ class InputEngine(
 ) {
     companion object {
         private const val TAG = "InputEngine"
+        private const val MAX_TEXT_LENGTH = 10000
     }
 
     private val clipboardManager: ClipboardManager by lazy {
@@ -42,6 +43,12 @@ class InputEngine(
         text: String,
         append: Boolean = false
     ): Boolean {
+        // Validate text length
+        if (text.length > MAX_TEXT_LENGTH) {
+            Log.e(TAG, "Text length ${text.length} exceeds maximum of $MAX_TEXT_LENGTH")
+            return false
+        }
+
         if (!element.isEditable) {
             Log.w(TAG, "Element is not editable")
             return false

@@ -26,7 +26,7 @@ A complete **AI-native Android automation platform** with MCP (Model Context Pro
 📱 DEVICE INFORMATION
 ==================================================
 Model                     : sdk_gphone64_x86_64
-IMEI                      : 867400022047199
+IMEI                      : [REDACTED]
 Android Version           : 15
 ==================================================
 
@@ -178,10 +178,10 @@ Add to your Claude Desktop MCP config:
 {
   "mcpServers": {
     "neuralbridge": {
-      "command": "/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp",
+      "command": "/path/to/neuralBridge/mcp-server/target/release/neuralbridge-mcp",
       "args": ["--device", "emulator-5554"],
       "env": {
-        "PATH": "/home/rdondeti/Android/Sdk/platform-tools:/usr/local/bin:/usr/bin:/bin"
+        "PATH": "~/Android/Sdk/platform-tools:/usr/local/bin:/usr/bin:/bin"
       }
     }
   }

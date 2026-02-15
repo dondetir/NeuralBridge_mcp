@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 import time
+from pathlib import Path
 from mcp_client import MCPClient
 
 
@@ -15,7 +16,7 @@ def find_streamhub_package():
     print("🔍 Searching for streamHub app...")
 
     result = subprocess.run([
-        "/home/rdondeti/Android/Sdk/platform-tools/adb",
+        str(Path.home() / "Android" / "Sdk" / "platform-tools" / "adb"),
         "shell", "pm", "list", "packages"
     ], capture_output=True, text=True)
 
@@ -48,7 +49,7 @@ def launch_app(package_name):
 
     # Method 1: Launch main activity
     result = subprocess.run([
-        "/home/rdondeti/Android/Sdk/platform-tools/adb",
+        str(Path.home() / "Android" / "Sdk" / "platform-tools" / "adb"),
         "shell", "monkey", "-p", package_name, "-c",
         "android.intent.category.LAUNCHER", "1"
     ], capture_output=True, text=True)
@@ -229,7 +230,7 @@ def navigate_streamhub(client: MCPClient, package_name: str):
         if i < len(all_interactive[:3]):
             print("   ⬅️  Going back...")
             subprocess.run([
-                "/home/rdondeti/Android/Sdk/platform-tools/adb",
+                str(Path.home() / "Android" / "Sdk" / "platform-tools" / "adb"),
                 "shell", "input", "keyevent", "KEYCODE_BACK"
             ], capture_output=True)
             time.sleep(1)
@@ -305,7 +306,8 @@ def main():
         return
 
     # Start MCP client
-    server_path = "/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp"
+    script_dir = Path(__file__).parent
+    server_path = script_dir / ".." / ".." / "mcp-server" / "target" / "release" / "neuralbridge-mcp"
     device_id = "emulator-5554"
 
     client = MCPClient(server_path, device_id)

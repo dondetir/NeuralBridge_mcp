@@ -135,7 +135,7 @@
 - **Distribution:** Cannot use Google Play (AccessibilityService policy), sideloading only
 
 ### Environment
-- **ADB:** Not in PATH (use full path `/home/rdondeti/Android/Sdk/platform-tools/adb`)
+- **ADB:** Not in PATH (use full path `~/Android/Sdk/platform-tools/adb`)
 - **Git:** Not initialized yet
 
 ---
@@ -164,25 +164,25 @@
 
 ### Run MCP Server
 ```bash
-cd /home/rdondeti/Code/Android/neuralBridge/mcp-server
-PATH="$PATH:/home/rdondeti/Android/Sdk/platform-tools" \
+cd ~/Code/Android/neuralBridge/mcp-server
+PATH="$PATH:$HOME/Android/Sdk/platform-tools" \
   ./target/release/neuralbridge-mcp --device emulator-5554
 ```
 
 ### Install Companion App
 ```bash
-cd /home/rdondeti/Code/Android/neuralBridge/companion-app
+cd ~/Code/Android/neuralBridge/companion-app
 ./gradlew installDebug
 
 # Enable AccessibilityService
-/home/rdondeti/Android/Sdk/platform-tools/adb shell settings put secure enabled_accessibility_services com.neuralbridge.companion/.NeuralBridgeAccessibilityService
-/home/rdondeti/Android/Sdk/platform-tools/adb shell settings put secure accessibility_enabled 1
+~/Android/Sdk/platform-tools/adb shell settings put secure enabled_accessibility_services com.neuralbridge.companion/.NeuralBridgeAccessibilityService
+~/Android/Sdk/platform-tools/adb shell settings put secure accessibility_enabled 1
 ```
 
 ### Verify Connection
 ```bash
 # Watch logs
-/home/rdondeti/Android/Sdk/platform-tools/adb logcat -s NeuralBridge:V
+~/Android/Sdk/platform-tools/adb logcat -s NeuralBridge:V
 
 # Expected:
 # - TCP server started on port 38472

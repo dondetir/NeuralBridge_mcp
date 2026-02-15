@@ -158,8 +158,58 @@ impl AdbExecutor {
         Ok(output.stdout)
     }
 
+    /// Validate package name format
+    fn validate_package_name(name: &str) -> Result<()> {
+        if name.is_empty() || name.len() > 255 {
+            bail!("Invalid package name length");
+        }
+        let valid = name.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_');
+        if !valid || !name.contains('.') {
+            bail!("Invalid package name format: {}", name);
+        }
+        Ok(())
+    }
+
+    /// Validate Android permission string
+    fn validate_permission(permission: &str) -> Result<()> {
+        if permission.is_empty() || permission.len() > 255 {
+            bail!("Invalid permission string length");
+        }
+        // Android permissions must start with a domain (e.g., android.permission.CAMERA)
+        if !permission.contains('.') {
+            bail!("Invalid permission format: must contain domain (e.g., android.permission.CAMERA)");
+        }
+        // Only allow alphanumeric, dots, and underscores
+        let valid = permission.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_');
+        if !valid {
+            bail!("Invalid permission format: contains illegal characters");
+        }
+        Ok(())
+    }
+
+    /// Validate APK file path
+    fn validate_apk_path(path: &str) -> Result<()> {
+        if path.is_empty() {
+            bail!("APK path is empty");
+        }
+        if !path.ends_with(".apk") {
+            bail!("APK path must end with .apk extension");
+        }
+        let path_buf = std::path::Path::new(path);
+        if !path_buf.exists() {
+            bail!("APK file does not exist: {}", path);
+        }
+        if !path_buf.is_file() {
+            bail!("APK path is not a file: {}", path);
+        }
+        Ok(())
+    }
+
     /// Install APK on device
     pub async fn install_apk(&self, device_id: &str, apk_path: &str, replace: bool) -> Result<()> {
+        // Validate APK path before proceeding
+        Self::validate_apk_path(apk_path)?;
+
         debug!("Installing APK on device {}: {}", device_id, apk_path);
 
         let mut args = vec!["-s", device_id, "install"];
@@ -180,6 +230,9 @@ impl AdbExecutor {
 
     /// Uninstall package from device
     pub async fn uninstall_package(&self, device_id: &str, package_name: &str) -> Result<()> {
+        // Validate package name before proceeding
+        Self::validate_package_name(package_name)?;
+
         debug!("Uninstalling package {} from device {}", package_name, device_id);
 
         let output = self.execute_command(&[
@@ -197,6 +250,9 @@ impl AdbExecutor {
 
     /// Clear app data
     pub async fn clear_app_data(&self, device_id: &str, package_name: &str) -> Result<()> {
+        // Validate package name before proceeding
+        Self::validate_package_name(package_name)?;
+
         debug!("Clearing data for package {} on device {}", package_name, device_id);
 
         let output = self.execute_command(&[
@@ -214,6 +270,9 @@ impl AdbExecutor {
 
     /// Force-stop an app
     pub async fn force_stop(&self, device_id: &str, package_name: &str) -> Result<()> {
+        // Validate package name before proceeding
+        Self::validate_package_name(package_name)?;
+
         debug!("Force-stopping package {} on device {}", package_name, device_id);
 
         self.execute_command(&[
@@ -227,6 +286,10 @@ impl AdbExecutor {
 
     /// Grant runtime permission to app
     pub async fn grant_permission(&self, device_id: &str, package_name: &str, permission: &str) -> Result<()> {
+        // Validate package name and permission before proceeding
+        Self::validate_package_name(package_name)?;
+        Self::validate_permission(permission)?;
+
         debug!("Granting permission {} to {} on device {}", permission, package_name, device_id);
 
         self.execute_command(&[
@@ -262,8 +325,24 @@ impl AdbExecutor {
         Ok(output.trim().to_string())
     }
 
+    /// Validate clipboard text for shell safety
+    fn validate_clipboard_text(text: &str) -> Result<()> {
+        if text.is_empty() {
+            return Ok(());
+        }
+        // Check for shell metacharacters that could lead to command injection
+        let dangerous_chars = ['$', '`', '\\', '|', '&', ';', '<', '>', '(', ')', '{', '}', '\n', '\r'];
+        if text.chars().any(|c| dangerous_chars.contains(&c)) {
+            bail!("Clipboard text contains potentially dangerous shell metacharacters");
+        }
+        Ok(())
+    }
+
     /// Set clipboard content
     pub async fn set_clipboard(&self, device_id: &str, text: &str) -> Result<()> {
+        // Validate clipboard text for shell safety
+        Self::validate_clipboard_text(text)?;
+
         debug!("Setting clipboard content on device {}", device_id);
 
         // Note: cmd clipboard set-text doesn't work reliably on all Android versions
@@ -437,5 +516,84 @@ mod tests {
 
         let installed = executor.check_installed().await.unwrap();
         assert!(installed);
+    }
+
+    #[test]
+    fn test_validate_package_name_valid() {
+        assert!(AdbExecutor::validate_package_name("com.example.app").is_ok());
+        assert!(AdbExecutor::validate_package_name("com.google.android.gms").is_ok());
+        assert!(AdbExecutor::validate_package_name("com.test_app.demo").is_ok());
+    }
+
+    #[test]
+    fn test_validate_package_name_invalid() {
+        // Empty name
+        assert!(AdbExecutor::validate_package_name("").is_err());
+
+        // No dot (missing domain)
+        assert!(AdbExecutor::validate_package_name("myapp").is_err());
+
+        // Contains shell metacharacters
+        assert!(AdbExecutor::validate_package_name("com.app;rm -rf /").is_err());
+        assert!(AdbExecutor::validate_package_name("com.app`whoami`").is_err());
+
+        // Too long
+        let long_name = "com.".to_string() + &"a".repeat(260);
+        assert!(AdbExecutor::validate_package_name(&long_name).is_err());
+    }
+
+    #[test]
+    fn test_validate_permission_valid() {
+        assert!(AdbExecutor::validate_permission("android.permission.CAMERA").is_ok());
+        assert!(AdbExecutor::validate_permission("android.permission.READ_EXTERNAL_STORAGE").is_ok());
+        assert!(AdbExecutor::validate_permission("com.example.permission.CUSTOM").is_ok());
+    }
+
+    #[test]
+    fn test_validate_permission_invalid() {
+        // Empty
+        assert!(AdbExecutor::validate_permission("").is_err());
+
+        // No dot (missing domain)
+        assert!(AdbExecutor::validate_permission("CAMERA").is_err());
+
+        // Contains shell metacharacters
+        assert!(AdbExecutor::validate_permission("android.permission;rm").is_err());
+
+        // Too long
+        let long_perm = "android.".to_string() + &"a".repeat(260);
+        assert!(AdbExecutor::validate_permission(&long_perm).is_err());
+    }
+
+    #[test]
+    fn test_validate_apk_path_invalid_extension() {
+        // Not .apk extension
+        assert!(AdbExecutor::validate_apk_path("app.txt").is_err());
+        assert!(AdbExecutor::validate_apk_path("/path/to/app.zip").is_err());
+    }
+
+    #[test]
+    fn test_validate_apk_path_empty() {
+        assert!(AdbExecutor::validate_apk_path("").is_err());
+    }
+
+    #[test]
+    fn test_validate_clipboard_text_safe() {
+        assert!(AdbExecutor::validate_clipboard_text("Hello World").is_ok());
+        assert!(AdbExecutor::validate_clipboard_text("Test text with spaces!").is_ok());
+        assert!(AdbExecutor::validate_clipboard_text("").is_ok());
+        assert!(AdbExecutor::validate_clipboard_text("email@example.com").is_ok());
+    }
+
+    #[test]
+    fn test_validate_clipboard_text_dangerous() {
+        // Shell metacharacters
+        assert!(AdbExecutor::validate_clipboard_text("text; rm -rf /").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text`whoami`").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text$(whoami)").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text | cat").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text & background").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text\nls").is_err());
+        assert!(AdbExecutor::validate_clipboard_text("text\\escape").is_err());
     }
 }

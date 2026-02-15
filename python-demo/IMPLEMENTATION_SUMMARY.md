@@ -217,7 +217,7 @@ from demo_client.scenarios.scenario_10_speed_demon import run_scenario_10_speed_
 **To test the implementation:**
 
 ```bash
-cd /home/rdondeti/Code/Android/neuralBridge/python-demo
+cd ~/Code/Android/neuralBridge/python-demo
 
 # 1. Setup (if not already done)
 ./setup.sh

@@ -22,8 +22,12 @@ class MCPClient:
         """Start the MCP server process"""
         print(f"🚀 Starting MCP server for device: {self.device_id}")
 
+        import os
+        from pathlib import Path
+        home = Path.home()
+        android_sdk = home / "Android" / "Sdk"
         env = {
-            'PATH': '/home/rdondeti/Android/Sdk/platform-tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+            'PATH': f'{android_sdk}/platform-tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
         }
 
         cmd = [
@@ -209,8 +213,10 @@ def demo_open_settings_and_find_version(client: MCPClient):
     # Step 1: Open Settings app via ADB (since we don't have app launch implemented yet)
     print("📱 Step 1: Opening Settings app...")
     import subprocess
+    from pathlib import Path
+    adb_path = Path.home() / "Android" / "Sdk" / "platform-tools" / "adb"
     subprocess.run([
-        "/home/rdondeti/Android/Sdk/platform-tools/adb",
+        str(adb_path),
         "shell", "am", "start", "-n",
         "com.android.settings/.Settings"
     ], capture_output=True)
@@ -398,7 +404,9 @@ def main():
     print()
 
     # Configuration
-    server_path = "/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp"
+    from pathlib import Path
+    script_dir = Path(__file__).parent
+    server_path = script_dir / ".." / ".." / "mcp-server" / "target" / "release" / "neuralbridge-mcp"
     device_id = "emulator-5554"
 
     # Create client

@@ -19,8 +19,10 @@ def get_android_version_info(client: MCPClient):
 
     # Step 1: Open Settings to "About" page directly
     print("📱 Step 1: Opening About Device page...")
+    from pathlib import Path
+    adb_path = Path.home() / "Android" / "Sdk" / "platform-tools" / "adb"
     subprocess.run([
-        "/home/rdondeti/Android/Sdk/platform-tools/adb",
+        str(adb_path),
         "shell", "am", "start", "-a",
         "android.settings.DEVICE_INFO_SETTINGS"
     ], capture_output=True)
@@ -149,7 +151,9 @@ def main():
     print("=" * 70)
     print()
 
-    server_path = "/home/rdondeti/Code/Android/neuralBridge/mcp-server/target/release/neuralbridge-mcp"
+    from pathlib import Path
+    script_dir = Path(__file__).parent
+    server_path = script_dir / ".." / ".." / "mcp-server" / "target" / "release" / "neuralbridge-mcp"
     device_id = "emulator-5554"
 
     client = MCPClient(server_path, device_id)
