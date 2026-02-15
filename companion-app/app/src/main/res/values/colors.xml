@@ -1,166 +1,166 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Wave Bridge Brand Colors -->
-    <color name="wave_blue">#5E72E4</color>
-    <color name="wave_purple">#825EE4</color>
-    <color name="wave_accent_light">#A3B3F5</color>
-    <color name="wave_accent_dark">#3E4DBD</color>
+    <!-- Ocean Depths Brand Colors -->
+    <color name="wave_blue">#00E5FF</color>
+    <color name="wave_purple">#3D5AFE</color>
+    <color name="wave_accent_light">#B8ECFF</color>
+    <color name="wave_accent_dark">#004D61</color>
 
-    <!-- Material Design 3 - Light Theme -->
+    <!-- Material Design 3 - Light Theme (Ocean Depths Dark Immersive) -->
     <!-- Primary -->
-    <color name="md_theme_light_primary">#5E72E4</color>
-    <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="md_theme_light_primaryContainer">#DFE1FF</color>
-    <color name="md_theme_light_onPrimaryContainer">#00006E</color>
+    <color name="md_theme_light_primary">#00E5FF</color>
+    <color name="md_theme_light_onPrimary">#0A1628</color>
+    <color name="md_theme_light_primaryContainer">#0B3D4A</color>
+    <color name="md_theme_light_onPrimaryContainer">#B8ECFF</color>
 
     <!-- Secondary -->
-    <color name="md_theme_light_secondary">#825EE4</color>
-    <color name="md_theme_light_onSecondary">#FFFFFF</color>
-    <color name="md_theme_light_secondaryContainer">#EBDDFF</color>
-    <color name="md_theme_light_onSecondaryContainer">#28005D</color>
+    <color name="md_theme_light_secondary">#80CBC4</color>
+    <color name="md_theme_light_onSecondary">#0A1628</color>
+    <color name="md_theme_light_secondaryContainer">#1E3448</color>
+    <color name="md_theme_light_onSecondaryContainer">#B2DFDB</color>
 
     <!-- Tertiary -->
-    <color name="md_theme_light_tertiary">#7D5260</color>
+    <color name="md_theme_light_tertiary">#3D5AFE</color>
     <color name="md_theme_light_onTertiary">#FFFFFF</color>
-    <color name="md_theme_light_tertiaryContainer">#FFD8E4</color>
-    <color name="md_theme_light_onTertiaryContainer">#31111D</color>
+    <color name="md_theme_light_tertiaryContainer">#1A237E</color>
+    <color name="md_theme_light_onTertiaryContainer">#C5CAE9</color>
 
     <!-- Error -->
-    <color name="md_theme_light_error">#BA1A1A</color>
-    <color name="md_theme_light_errorContainer">#FFDAD6</color>
+    <color name="md_theme_light_error">#FF5252</color>
+    <color name="md_theme_light_errorContainer">#93000A</color>
     <color name="md_theme_light_onError">#FFFFFF</color>
-    <color name="md_theme_light_onErrorContainer">#410002</color>
+    <color name="md_theme_light_onErrorContainer">#FFDAD6</color>
 
     <!-- Background & Surface -->
-    <color name="md_theme_light_background">#FEFBFF</color>
-    <color name="md_theme_light_onBackground">#1B1B1F</color>
-    <color name="md_theme_light_surface">#FEFBFF</color>
-    <color name="md_theme_light_onSurface">#1B1B1F</color>
-    <color name="md_theme_light_surfaceVariant">#E4E1EC</color>
-    <color name="md_theme_light_onSurfaceVariant">#46464F</color>
+    <color name="md_theme_light_background">#0A1628</color>
+    <color name="md_theme_light_onBackground">#E0E8F0</color>
+    <color name="md_theme_light_surface">#0A1628</color>
+    <color name="md_theme_light_onSurface">#E0E8F0</color>
+    <color name="md_theme_light_surfaceVariant">#152A40</color>
+    <color name="md_theme_light_onSurfaceVariant">#8DA0B5</color>
 
     <!-- Outline -->
-    <color name="md_theme_light_outline">#777680</color>
-    <color name="md_theme_light_outlineVariant">#C8C5D0</color>
+    <color name="md_theme_light_outline">#1E3448</color>
+    <color name="md_theme_light_outlineVariant">#152A40</color>
 
     <!-- Inverse -->
-    <color name="md_theme_light_inverseSurface">#303034</color>
-    <color name="md_theme_light_inverseOnSurface">#F3F0F4</color>
-    <color name="md_theme_light_inversePrimary">#BBC3FF</color>
+    <color name="md_theme_light_inverseSurface">#E0E8F0</color>
+    <color name="md_theme_light_inverseOnSurface">#0A1628</color>
+    <color name="md_theme_light_inversePrimary">#004D61</color>
 
     <!-- Shadow & Scrim -->
     <color name="md_theme_light_shadow">#000000</color>
     <color name="md_theme_light_scrim">#000000</color>
 
     <!-- Surface Tints -->
-    <color name="md_theme_light_surfaceTint">#5E72E4</color>
+    <color name="md_theme_light_surfaceTint">#00E5FF</color>
 
-    <!-- Material Design 3 - Dark Theme -->
+    <!-- Material Design 3 - Dark Theme (same as light for Ocean Depths) -->
     <!-- Primary -->
-    <color name="md_theme_dark_primary">#BBC3FF</color>
-    <color name="md_theme_dark_onPrimary">#2B3FA4</color>
-    <color name="md_theme_dark_primaryContainer">#4458CC</color>
-    <color name="md_theme_dark_onPrimaryContainer">#DFE1FF</color>
+    <color name="md_theme_dark_primary">#00E5FF</color>
+    <color name="md_theme_dark_onPrimary">#0A1628</color>
+    <color name="md_theme_dark_primaryContainer">#0B3D4A</color>
+    <color name="md_theme_dark_onPrimaryContainer">#B8ECFF</color>
 
     <!-- Secondary -->
-    <color name="md_theme_dark_secondary">#D4BAFF</color>
-    <color name="md_theme_dark_onSecondary">#4A2473</color>
-    <color name="md_theme_dark_secondaryContainer">#643B8B</color>
-    <color name="md_theme_dark_onSecondaryContainer">#EBDDFF</color>
+    <color name="md_theme_dark_secondary">#80CBC4</color>
+    <color name="md_theme_dark_onSecondary">#0A1628</color>
+    <color name="md_theme_dark_secondaryContainer">#1E3448</color>
+    <color name="md_theme_dark_onSecondaryContainer">#B2DFDB</color>
 
     <!-- Tertiary -->
-    <color name="md_theme_dark_tertiary">#EFB8C8</color>
-    <color name="md_theme_dark_onTertiary">#492532</color>
-    <color name="md_theme_dark_tertiaryContainer">#633B48</color>
-    <color name="md_theme_dark_onTertiaryContainer">#FFD8E4</color>
+    <color name="md_theme_dark_tertiary">#3D5AFE</color>
+    <color name="md_theme_dark_onTertiary">#FFFFFF</color>
+    <color name="md_theme_dark_tertiaryContainer">#1A237E</color>
+    <color name="md_theme_dark_onTertiaryContainer">#C5CAE9</color>
 
     <!-- Error -->
-    <color name="md_theme_dark_error">#FFB4AB</color>
+    <color name="md_theme_dark_error">#FF5252</color>
     <color name="md_theme_dark_errorContainer">#93000A</color>
-    <color name="md_theme_dark_onError">#690005</color>
+    <color name="md_theme_dark_onError">#FFFFFF</color>
     <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
 
     <!-- Background & Surface -->
-    <color name="md_theme_dark_background">#1B1B1F</color>
-    <color name="md_theme_dark_onBackground">#E4E1E6</color>
-    <color name="md_theme_dark_surface">#1B1B1F</color>
-    <color name="md_theme_dark_onSurface">#E4E1E6</color>
-    <color name="md_theme_dark_surfaceVariant">#46464F</color>
-    <color name="md_theme_dark_onSurfaceVariant">#C8C5D0</color>
+    <color name="md_theme_dark_background">#0A1628</color>
+    <color name="md_theme_dark_onBackground">#E0E8F0</color>
+    <color name="md_theme_dark_surface">#0A1628</color>
+    <color name="md_theme_dark_onSurface">#E0E8F0</color>
+    <color name="md_theme_dark_surfaceVariant">#152A40</color>
+    <color name="md_theme_dark_onSurfaceVariant">#8DA0B5</color>
 
     <!-- Outline -->
-    <color name="md_theme_dark_outline">#918F9A</color>
-    <color name="md_theme_dark_outlineVariant">#46464F</color>
+    <color name="md_theme_dark_outline">#1E3448</color>
+    <color name="md_theme_dark_outlineVariant">#152A40</color>
 
     <!-- Inverse -->
-    <color name="md_theme_dark_inverseSurface">#E4E1E6</color>
-    <color name="md_theme_dark_inverseOnSurface">#303034</color>
-    <color name="md_theme_dark_inversePrimary">#5E72E4</color>
+    <color name="md_theme_dark_inverseSurface">#E0E8F0</color>
+    <color name="md_theme_dark_inverseOnSurface">#0A1628</color>
+    <color name="md_theme_dark_inversePrimary">#004D61</color>
 
     <!-- Shadow & Scrim -->
     <color name="md_theme_dark_shadow">#000000</color>
     <color name="md_theme_dark_scrim">#000000</color>
 
     <!-- Surface Tints -->
-    <color name="md_theme_dark_surfaceTint">#BBC3FF</color>
+    <color name="md_theme_dark_surfaceTint">#00E5FF</color>
 
     <!-- Semantic Colors -->
-    <color name="success">#00C853</color>
-    <color name="success_container">#B9F6CA</color>
-    <color name="on_success">#FFFFFF</color>
-    <color name="on_success_container">#00600F</color>
+    <color name="success">#00E676</color>
+    <color name="success_container">#0B3D4A</color>
+    <color name="on_success">#0A1628</color>
+    <color name="on_success_container">#00E676</color>
 
-    <color name="warning">#FF9800</color>
-    <color name="warning_container">#FFE0B2</color>
-    <color name="on_warning">#000000</color>
-    <color name="on_warning_container">#E65100</color>
+    <color name="warning">#FFAB40</color>
+    <color name="warning_container">#3E2800</color>
+    <color name="on_warning">#0A1628</color>
+    <color name="on_warning_container">#FFAB40</color>
 
-    <color name="info">#2196F3</color>
-    <color name="info_container">#BBDEFB</color>
-    <color name="on_info">#FFFFFF</color>
-    <color name="on_info_container">#0D47A1</color>
+    <color name="info">#00E5FF</color>
+    <color name="info_container">#0B3D4A</color>
+    <color name="on_info">#0A1628</color>
+    <color name="on_info_container">#00E5FF</color>
 
-    <!-- Wave Gradient Colors (for programmatic use) -->
-    <color name="wave_gradient_start">#5E72E4</color>
-    <color name="wave_gradient_middle">#7168E4</color>
-    <color name="wave_gradient_end">#825EE4</color>
+    <!-- Ocean Depths Gradient Colors (for programmatic use) -->
+    <color name="wave_gradient_start">#004D61</color>
+    <color name="wave_gradient_middle">#0B3D4A</color>
+    <color name="wave_gradient_end">#1A237E</color>
 
-    <!-- Accessibility Colors (WCAG AAA compliant) -->
-    <color name="text_high_emphasis">#DE000000</color> <!-- 87% black -->
-    <color name="text_medium_emphasis">#99000000</color> <!-- 60% black -->
-    <color name="text_disabled">#61000000</color> <!-- 38% black -->
+    <!-- Accessibility Colors (Ocean Depths) -->
+    <color name="text_high_emphasis">#E0E8F0</color>
+    <color name="text_medium_emphasis">#998DA0B5</color> <!-- 60% opacity -->
+    <color name="text_disabled">#618DA0B5</color> <!-- 38% opacity -->
 
-    <color name="text_high_emphasis_dark">#FFFFFFFF</color> <!-- 100% white -->
-    <color name="text_medium_emphasis_dark">#B3FFFFFF</color> <!-- 70% white -->
-    <color name="text_disabled_dark">#61FFFFFF</color> <!-- 38% white -->
+    <color name="text_high_emphasis_dark">#E0E8F0</color>
+    <color name="text_medium_emphasis_dark">#B38DA0B5</color> <!-- 70% opacity -->
+    <color name="text_disabled_dark">#618DA0B5</color> <!-- 38% opacity -->
 
     <!-- Overlay Colors -->
-    <color name="overlay_light_04">#0A000000</color> <!-- 4% black -->
-    <color name="overlay_light_08">#14000000</color> <!-- 8% black -->
-    <color name="overlay_light_12">#1F000000</color> <!-- 12% black -->
-    <color name="overlay_light_16">#29000000</color> <!-- 16% black -->
+    <color name="overlay_light_04">#0AFFFFFF</color>
+    <color name="overlay_light_08">#14FFFFFF</color>
+    <color name="overlay_light_12">#1FFFFFFF</color>
+    <color name="overlay_light_16">#29FFFFFF</color>
 
-    <color name="overlay_dark_04">#0AFFFFFF</color> <!-- 4% white -->
-    <color name="overlay_dark_08">#14FFFFFF</color> <!-- 8% white -->
-    <color name="overlay_dark_12">#1FFFFFFF</color> <!-- 12% white -->
-    <color name="overlay_dark_16">#29FFFFFF</color> <!-- 16% white -->
+    <color name="overlay_dark_04">#0A000000</color>
+    <color name="overlay_dark_08">#14000000</color>
+    <color name="overlay_dark_12">#1F000000</color>
+    <color name="overlay_dark_16">#29000000</color>
 
     <!-- Status Colors -->
-    <color name="status_active">#00C853</color>
-    <color name="status_inactive">#9E9E9E</color>
-    <color name="status_error">#BA1A1A</color>
-    <color name="status_warning">#FF9800</color>
+    <color name="status_active">#00E676</color>
+    <color name="status_inactive">#8DA0B5</color>
+    <color name="status_error">#FF5252</color>
+    <color name="status_warning">#FFAB40</color>
 
     <!-- Transparent -->
     <color name="transparent">#00000000</color>
 
-    <!-- Drawable Resource Aliases (for backward compatibility with drawables) -->
+    <!-- Drawable Resource Aliases -->
     <color name="primary">@color/wave_blue</color>
     <color name="primary_dark">@color/wave_accent_dark</color>
     <color name="accent">@color/wave_accent_light</color>
     <color name="surface">@color/md_theme_light_surface</color>
     <color name="divider">@color/md_theme_light_outlineVariant</color>
-    <color name="ripple_primary">#29825EE4</color> <!-- 16% purple -->
+    <color name="ripple_primary">#2900E5FF</color> <!-- 16% cyan -->
     <color name="progress_background">@color/md_theme_light_surfaceVariant</color>
     <color name="item_pressed">@color/md_theme_light_primaryContainer</color>
     <color name="item_selected">@color/md_theme_light_secondaryContainer</color>

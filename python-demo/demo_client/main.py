@@ -1,6 +1,6 @@
 """NeuralBridge Python MCP Demo Client - Main Entry Point
 
-Interactive CLI for running demo scenarios showcasing Phase 1+2 features.
+Interactive CLI for running demo scenarios showcasing all 36 MCP tools.
 """
 
 import asyncio
@@ -18,31 +18,36 @@ from rich.table import Table
 
 from .android_client import AndroidClient
 from .mcp_client import NeuralBridgeMCPClient, MCPConnectionError
-from .scenarios.scenario_1_basics import run_scenario_1_basics
-from .scenarios.scenario_2_forms import run_scenario_2_forms
-from .scenarios.scenario_3_gestures import run_scenario_3_gestures
-from .scenarios.scenario_4_events import run_scenario_4_events
-from .scenarios.scenario_5_clipboard import run_scenario_5_clipboard
-from .scenarios.scenario_6_app_lifecycle import run_scenario_6_app_lifecycle
-from .scenarios.scenario_7_stress_test import run_scenario_7_stress_test
-from .scenarios.scenario_8_smart_explorer import run_scenario_8_smart_explorer
-from .scenarios.scenario_9_shopping import run_scenario_9_shopping
-from .scenarios.scenario_10_speed_demon import run_scenario_10_speed_demon
+from .scenarios.preflight import run_preflight
+from .scenarios.scenario_1_discovery import run_scenario_1_discovery
+from .scenarios.scenario_2_settings import run_scenario_2_settings
+from .scenarios.scenario_3_contacts import run_scenario_3_contacts
+from .scenarios.scenario_4_gestures import run_scenario_4_gestures
+from .scenarios.scenario_5_chrome import run_scenario_5_chrome
+from .scenarios.scenario_6_multiapp import run_scenario_6_multiapp
+from .scenarios.scenario_7_events import run_scenario_7_events
+from .scenarios.scenario_8_lifecycle import run_scenario_8_lifecycle
+from .scenarios.scenario_9_accessibility import run_scenario_9_accessibility
+from .scenarios.scenario_10_recovery import run_scenario_10_recovery
+from .scenarios.scenario_11_explorer import run_scenario_11_explorer
+from .scenarios.scenario_12_stress_test import run_scenario_12_stress_test
 from .utils.logger import console, setup_logger
 from .utils.performance import LatencyTracker
 
 # Scenario registry
 SCENARIOS = {
-    1: ("UI Inspection & Navigation", "~2 min", run_scenario_1_basics),
-    2: ("📝 Adaptive Form Filling", "~3 min", run_scenario_2_forms),
-    3: ("🎨 Gesture Showcase with Context", "~2 min", run_scenario_3_gestures),
-    4: ("Event Streaming", "~2 min", run_scenario_4_events),
-    5: ("Clipboard Operations", "~1 min", run_scenario_5_clipboard),
-    6: ("App Lifecycle Management", "~2 min", run_scenario_6_app_lifecycle),
-    7: ("Performance Stress Test", "~1 min", run_scenario_7_stress_test),
-    8: ("🧭 Smart App Explorer (AI)", "~3 min", run_scenario_8_smart_explorer),
-    9: ("🛒 E-commerce Shopping Journey", "~4 min", run_scenario_9_shopping),
-    10: ("⚡ Speed Demon Challenge", "~2 min", run_scenario_10_speed_demon),
+    1: ("Device Discovery & Inspection", "~1 min", run_scenario_1_discovery),
+    2: ("Settings Deep Dive", "~3 min", run_scenario_2_settings),
+    3: ("Contact Creation Workflow", "~3 min", run_scenario_3_contacts),
+    4: ("Gallery Gesture Playground", "~3 min", run_scenario_4_gestures),
+    5: ("Chrome Web Automation & Clipboard", "~3 min", run_scenario_5_chrome),
+    6: ("Multi-App Workflow", "~3 min", run_scenario_6_multiapp),
+    7: ("Clock, Events & Notifications", "~2 min", run_scenario_7_events),
+    8: ("App Lifecycle & Debugging", "~2 min", run_scenario_8_lifecycle),
+    9: ("Accessibility Audit", "~2 min", run_scenario_9_accessibility),
+    10: ("Error Recovery & Resilience", "~2 min", run_scenario_10_recovery),
+    11: ("AI Explorer", "~3 min", run_scenario_11_explorer),
+    12: ("Performance Stress Test (Bonus)", "~2 min", run_scenario_12_stress_test),
 }
 
 
@@ -52,9 +57,9 @@ def print_banner():
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
 ║        NeuralBridge Python MCP Demo Client               ║
-║        10 Stunning Scenarios | AI-Native Automation      ║
+║        12 Scenarios | 36/36 MCP Tools | AI-Native        ║
 ║                                                           ║
-║        24 MCP Tools | <100ms Latency | Phase 1+2         ║
+║        Phase 1+2+3 Complete | <100ms Latency             ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
     """
@@ -83,7 +88,7 @@ def print_scenario_menu():
     for num, (name, duration, _) in SCENARIOS.items():
         table.add_row(str(num), name, duration)
 
-    table.add_row("11", "[bold]Run All Scenarios[/bold]", "~22 min")
+    table.add_row("13", "[bold]Run All Scenarios[/bold]", "~29 min")
     table.add_row("0", "Exit", "")
 
     console.print("\n")
@@ -97,17 +102,7 @@ async def run_scenario(
     tracker: LatencyTracker,
     screenshot_dir: Path
 ) -> bool:
-    """Run a single scenario.
-
-    Args:
-        scenario_num: Scenario number (1-10)
-        client: AndroidClient instance
-        tracker: LatencyTracker for performance measurement
-        screenshot_dir: Directory to save screenshots
-
-    Returns:
-        True if scenario passed, False otherwise
-    """
+    """Run a single scenario."""
     if scenario_num not in SCENARIOS:
         console.print(f"[red]Invalid scenario number: {scenario_num}[/red]")
         return False
@@ -130,22 +125,13 @@ async def run_all_scenarios(
     tracker: LatencyTracker,
     screenshot_dir: Path
 ) -> dict:
-    """Run all scenarios sequentially.
-
-    Args:
-        client: AndroidClient instance
-        tracker: LatencyTracker for performance measurement
-        screenshot_dir: Directory to save screenshots
-
-    Returns:
-        Dictionary with scenario results
-    """
-    console.print("\n[bold cyan]Running All Scenarios (1-10)[/bold cyan]\n")
+    """Run all scenarios sequentially."""
+    console.print("\n[bold cyan]Running All Scenarios (1-12)[/bold cyan]\n")
 
     start_time = datetime.now()
     results = {}
 
-    for scenario_num in range(1, 11):
+    for scenario_num in range(1, 13):
         scenario_start = datetime.now()
         passed = await run_scenario(scenario_num, client, tracker, screenshot_dir)
         scenario_end = datetime.now()
@@ -169,19 +155,19 @@ async def run_all_scenarios(
         border_style="cyan"
     ))
 
-    # Results table
     summary_table = Table(title="Scenario Results", show_header=True, header_style="bold magenta")
     summary_table.add_column("Scenario", style="green", width=45)
     summary_table.add_column("Result", style="cyan", width=10)
     summary_table.add_column("Duration", style="yellow", width=15)
 
     passed_count = 0
+    total_scenarios = len(SCENARIOS)
     for num, (name, _, _) in SCENARIOS.items():
         result = results.get(num, {})
         passed = result.get("passed", False)
         duration = result.get("duration", 0)
 
-        status = "✅ PASS" if passed else "❌ FAIL"
+        status = "PASS" if passed else "FAIL"
         duration_str = f"{duration:.1f}s"
 
         summary_table.add_row(f"{num}. {name}", status, duration_str)
@@ -191,18 +177,17 @@ async def run_all_scenarios(
 
     console.print(summary_table)
 
-    # Overall stats
     console.print(f"\n[bold]Overall Statistics:[/bold]")
-    console.print(f"  Scenarios Run: [cyan]{len(results)}/10[/cyan]")
-    console.print(f"  Success Rate: [{'green' if passed_count == 10 else 'yellow'}]{passed_count}/{len(results)} ({passed_count/len(results)*100:.0f}%)[/{'green' if passed_count == 10 else 'yellow'}]")
+    console.print(f"  Scenarios Run: [cyan]{len(results)}/{total_scenarios}[/cyan]")
+    pct = passed_count / max(len(results), 1) * 100
+    color = "green" if passed_count == total_scenarios else "yellow"
+    console.print(f"  Success Rate: [{color}]{passed_count}/{len(results)} ({pct:.0f}%)[/{color}]")
     console.print(f"  Total Time: [cyan]{total_duration/60:.1f}m {total_duration%60:.0f}s[/cyan]")
 
-    # Screenshots
     screenshot_files = list(screenshot_dir.glob("*.jpg"))
     console.print(f"  Screenshots Saved: [cyan]{len(screenshot_files)}[/cyan]")
     console.print(f"  Screenshot Directory: [cyan]{screenshot_dir}[/cyan]")
 
-    # Performance summary
     console.print("\n")
     tracker.print_summary("Overall Performance Summary")
 
@@ -215,18 +200,9 @@ async def interactive_mode(
     screenshot_dir: Path,
     log_level: str
 ):
-    """Run interactive demo mode.
-
-    Args:
-        mcp_server_path: Path to MCP server binary
-        device_id: Android device ID
-        screenshot_dir: Directory to save screenshots
-        log_level: Logging level
-    """
-    # Setup logger
+    """Run interactive demo mode."""
     logger = setup_logger("neuralbridge", log_level, enable_rich=True)
 
-    # Print banner
     print_banner()
     print_connection_info(device_id)
 
@@ -239,15 +215,14 @@ async def interactive_mode(
         console.print(f"[bold red]Failed to connect to MCP server:[/bold red]")
         console.print(f"[red]{e}[/red]")
         console.print("\n[yellow]Troubleshooting:[/yellow]")
-        console.print("  1. Verify emulator is running: adb devices")
-        console.print("  2. Verify companion app is installed")
+        console.print("  1. Verify device is connected: adb devices")
+        console.print("  2. Verify companion app is installed and running")
         console.print("  3. Verify port forwarding: adb forward tcp:38472 tcp:38472")
         console.print(f"  4. Verify MCP server binary exists: {mcp_server_path}")
         return
 
-    console.print("[bold green]✅ Connected to MCP server![/bold green]")
+    console.print("[bold green]Connected to MCP server![/bold green]")
 
-    # Create Android client and tracker
     client = AndroidClient(mcp_client)
     tracker = LatencyTracker()
 
@@ -256,6 +231,14 @@ async def interactive_mode(
         tools = await mcp_client.list_tools()
         console.print(f"[bold]Available MCP Tools:[/bold] [cyan]{len(tools)}[/cyan]")
 
+        # Run pre-flight checks
+        console.print("\n[bold]Running pre-flight checks...[/bold]")
+        preflight_ok = await run_preflight(client, tracker, screenshot_dir)
+        if not preflight_ok:
+            console.print("[bold yellow]Pre-flight checks had issues, but continuing...[/bold yellow]")
+        else:
+            console.print("[bold green]Pre-flight checks passed![/bold green]")
+
         # Interactive loop
         while True:
             print_scenario_menu()
@@ -263,7 +246,7 @@ async def interactive_mode(
             try:
                 choice = IntPrompt.ask(
                     "[bold cyan]Select scenario[/bold cyan]",
-                    choices=[str(i) for i in range(12)],
+                    choices=[str(i) for i in range(14)],
                     default=0
                 )
             except KeyboardInterrupt:
@@ -273,27 +256,25 @@ async def interactive_mode(
             if choice == 0:
                 console.print("\n[bold cyan]Exiting demo. Thank you![/bold cyan]")
                 break
-            elif choice == 11:
-                # Run all scenarios
+            elif choice == 13:
                 await run_all_scenarios(client, tracker, screenshot_dir)
-                break  # Exit after running all
+                break
             elif choice in SCENARIOS:
-                # Run single scenario
                 await run_scenario(choice, client, tracker, screenshot_dir)
-
-                # Ask if user wants to continue
                 console.print("\n")
-                continue_prompt = input("Press Enter to continue, or Ctrl+C to exit... ")
+                try:
+                    input("Press Enter to continue, or Ctrl+C to exit... ")
+                except KeyboardInterrupt:
+                    break
             else:
                 console.print(f"[red]Invalid choice: {choice}[/red]")
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Interrupted by user[/yellow]")
     finally:
-        # Cleanup
         console.print("\n[bold]Closing MCP connection...[/bold]")
         await mcp_client.close()
-        console.print("[bold green]✅ Connection closed. Goodbye![/bold green]\n")
+        console.print("[bold green]Connection closed. Goodbye![/bold green]\n")
 
 
 @click.command()
@@ -311,7 +292,7 @@ async def interactive_mode(
 @click.option(
     "--scenario",
     type=int,
-    help="Run specific scenario (1-10)"
+    help="Run specific scenario (1-12)"
 )
 @click.option(
     "--all",
@@ -341,28 +322,19 @@ def main(
 ):
     """NeuralBridge Python MCP Demo Client.
 
-    Interactive demo showcasing Phase 1+2 features via MCP protocol.
+    Interactive demo showcasing all 36 MCP tools via 12 scenarios.
     """
-    # Resolve paths
     mcp_server_path = Path(server).resolve()
     screenshot_dir = Path(screenshots).resolve()
     screenshot_dir.mkdir(parents=True, exist_ok=True)
 
-    # Verify MCP server binary exists
     if not mcp_server_path.exists():
         console.print(f"[bold red]Error:[/bold red] MCP server binary not found: {mcp_server_path}")
         console.print("\n[yellow]Build it with:[/yellow]")
         console.print("  cd mcp-server && cargo build --release")
         sys.exit(1)
 
-    # Run in appropriate mode
-    if scenario is not None or run_all:
-        # Headless mode (not yet fully implemented - use interactive for now)
-        console.print("[yellow]Headless mode not yet implemented. Using interactive mode.[/yellow]")
-        asyncio.run(interactive_mode(str(mcp_server_path), device, screenshot_dir, log_level))
-    else:
-        # Interactive mode
-        asyncio.run(interactive_mode(str(mcp_server_path), device, screenshot_dir, log_level))
+    asyncio.run(interactive_mode(str(mcp_server_path), device, screenshot_dir, log_level))
 
 
 if __name__ == "__main__":

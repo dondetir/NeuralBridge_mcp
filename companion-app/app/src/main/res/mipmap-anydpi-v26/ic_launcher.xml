@@ -4,7 +4,7 @@
   Android 8.0+ (API 26+)
 
   Adaptive icons consist of two layers:
-  - Background: Gradient (#5E72E4 → #825EE4)
+  - Background: Gradient (#004D61 → #1A237E)
   - Foreground: Wave Bridge design
 
   The system automatically applies masks (circle, squircle, rounded square)

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Base NeuralBridge Theme (Light) -->
-    <style name="Theme.NeuralBridge" parent="Theme.Material3.Light.NoActionBar">
+    <!-- Base NeuralBridge Theme (Ocean Depths Dark Immersive) -->
+    <style name="Theme.NeuralBridge" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary Brand Colors -->
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
@@ -45,14 +45,11 @@
         <item name="colorOnSurfaceInverse">@color/md_theme_light_inverseOnSurface</item>
         <item name="colorPrimaryInverse">@color/md_theme_light_inversePrimary</item>
 
-        <!-- Shadow & Scrim -->
-        <item name="android:colorBackground">@color/md_theme_light_background</item>
-
         <!-- StatusBar & NavigationBar -->
         <item name="android:statusBarColor">@color/md_theme_light_surface</item>
         <item name="android:navigationBarColor">@color/md_theme_light_surface</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
 
         <!-- Window Properties -->
         <item name="android:windowBackground">@color/md_theme_light_background</item>
@@ -72,7 +69,7 @@
         <item name="textAppearanceBodySmall">@style/TextAppearance.NeuralBridge.BodySmall</item>
     </style>
 
-    <!-- Dark Theme -->
+    <!-- Dark Theme (identical to base for Ocean Depths) -->
     <style name="Theme.NeuralBridge.Dark" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Primary Brand Colors -->
         <item name="colorPrimary">@color/md_theme_dark_primary</item>
@@ -117,9 +114,6 @@
         <item name="colorOnSurfaceInverse">@color/md_theme_dark_inverseOnSurface</item>
         <item name="colorPrimaryInverse">@color/md_theme_dark_inversePrimary</item>
 
-        <!-- Shadow & Scrim -->
-        <item name="android:colorBackground">@color/md_theme_dark_background</item>
-
         <!-- StatusBar & NavigationBar -->
         <item name="android:statusBarColor">@color/md_theme_dark_surface</item>
         <item name="android:navigationBarColor">@color/md_theme_dark_surface</item>
@@ -160,7 +154,7 @@
         <item name="cornerSize">@dimen/corner_radius_large</item>
     </style>
 
-    <!-- Dialog Theme with Wave aesthetics -->
+    <!-- Dialog Theme with Ocean Depths aesthetics -->
     <style name="Theme.NeuralBridge.Dialog" parent="ThemeOverlay.Material3.Dialog">
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorSecondary">@color/md_theme_light_secondary</item>

@@ -22,25 +22,25 @@
             <!-- Large background wave -->
             <path
                 android:fillAlpha="0.15"
-                android:fillColor="#FFFFFF"
+                android:fillColor="#00E5FF"
                 android:pathData="M0,140 Q90,80 180,140 T360,140 L360,220 Q270,280 180,220 T0,220 Z" />
 
             <!-- Medium wave -->
             <path
                 android:fillAlpha="0.12"
-                android:fillColor="#FFFFFF"
+                android:fillColor="#00E5FF"
                 android:pathData="M0,180 Q90,140 180,180 T360,180 L360,240 Q270,280 180,240 T0,240 Z" />
 
             <!-- Small accent wave -->
             <path
                 android:fillAlpha="0.08"
-                android:fillColor="@color/wave_accent_light"
+                android:fillColor="#00E5FF"
                 android:pathData="M0,100 Q90,60 180,100 T360,100 L360,140 Q270,180 180,140 T0,140 Z" />
 
             <!-- Top decorative wave -->
             <path
                 android:fillAlpha="0.1"
-                android:fillColor="#FFFFFF"
+                android:fillColor="#00E5FF"
                 android:pathData="M0,40 Q90,20 180,40 T360,40 L360,60 Q270,80 180,60 T0,60 Z" />
         </vector>
     </item>

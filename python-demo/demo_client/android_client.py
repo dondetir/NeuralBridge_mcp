@@ -1,6 +1,6 @@
 """High-level Android API wrapper for NeuralBridge MCP tools.
 
-Provides a friendly Python API wrapping all 24 MCP tools from Phase 1 and Phase 2.
+Provides a friendly Python API wrapping all 36 MCP tools from Phase 1, Phase 2, and Phase 3.
 """
 
 import base64
@@ -552,3 +552,210 @@ class AndroidClient:
             MCPToolError: If tool call fails
         """
         await self.mcp.call_tool("android_set_clipboard", {"text": text})
+
+    # ========== PHASE 3 TOOLS (11) ==========
+
+    async def scroll_to_element(
+        self,
+        text: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        content_desc: Optional[str] = None,
+        direction: Optional[str] = None,
+        max_scrolls: Optional[int] = None,
+        timeout_ms: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Scroll until element is visible.
+
+        Args:
+            text, resource_id, content_desc: Element selector
+            direction, max_scrolls, timeout_ms: Scroll behavior
+
+        Returns:
+            Element information
+
+        Raises:
+            MCPToolError: If element not found after scrolling
+        """
+        params = {
+            k: v for k, v in {
+                "text": text,
+                "resource_id": resource_id,
+                "content_desc": content_desc,
+                "direction": direction,
+                "max_scrolls": max_scrolls,
+                "timeout_ms": timeout_ms
+            }.items() if v is not None
+        }
+
+        return await self.mcp.call_tool("android_scroll_to_element", params)
+
+    async def get_screen_context(
+        self,
+        include_all_elements: bool = False
+    ) -> Dict[str, Any]:
+        """Get semantic screen context (focused elements, visible text).
+
+        Args:
+            include_all_elements: Include all visible elements
+
+        Returns:
+            Screen context dictionary
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        return await self.mcp.call_tool(
+            "android_get_screen_context",
+            {"include_all_elements": include_all_elements}
+        )
+
+    async def screenshot_diff(
+        self,
+        reference_base64: str,
+        threshold: float = 0.95
+    ) -> Dict[str, Any]:
+        """Compare current screenshot with reference.
+
+        Args:
+            reference_base64: Base64-encoded reference image
+            threshold: Similarity threshold (0.0-1.0)
+
+        Returns:
+            Dictionary with similarity score
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        return await self.mcp.call_tool("android_screenshot_diff", {
+            "reference_base64": reference_base64,
+            "threshold": threshold
+        })
+
+    async def capture_logcat(
+        self,
+        package: Optional[str] = None,
+        level: Optional[str] = None,
+        lines: Optional[int] = None,
+        crash_only: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """Capture logcat output.
+
+        Args:
+            package, level, lines, crash_only: Logcat filters
+
+        Returns:
+            Logcat output dictionary
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        params = {
+            k: v for k, v in {
+                "package": package,
+                "level": level,
+                "lines": lines,
+                "crash_only": crash_only
+            }.items() if v is not None
+        }
+
+        return await self.mcp.call_tool("android_capture_logcat", params)
+
+    async def get_recent_toasts(
+        self,
+        since_ms: Optional[int] = 5000
+    ) -> List[Dict[str, Any]]:
+        """Get recent toast messages.
+
+        Args:
+            since_ms: Time window in milliseconds
+
+        Returns:
+            List of toast message objects
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        result = await self.mcp.call_tool(
+            "android_get_recent_toasts",
+            {"since_ms": since_ms} if since_ms is not None else {}
+        )
+        return result.get("toasts", [])
+
+    async def pull_to_refresh(self) -> None:
+        """Execute pull-to-refresh gesture.
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        await self.mcp.call_tool("android_pull_to_refresh", {})
+
+    async def dismiss_keyboard(self) -> None:
+        """Dismiss on-screen keyboard.
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        await self.mcp.call_tool("android_dismiss_keyboard", {})
+
+    async def accessibility_audit(self) -> Dict[str, Any]:
+        """Run accessibility audit on current screen.
+
+        Returns:
+            Audit results dictionary
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        return await self.mcp.call_tool("android_accessibility_audit", {})
+
+    async def clear_app_data(self, package_name: str) -> None:
+        """Clear app data (via ADB).
+
+        Args:
+            package_name: Package to clear data for
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        await self.mcp.call_tool("android_clear_app_data", {"package_name": package_name})
+
+    async def get_device_info(self) -> Dict[str, Any]:
+        """Get device information (model, OS version, screen size).
+
+        Returns:
+            Device info dictionary
+
+        Raises:
+            MCPToolError: If tool call fails
+        """
+        return await self.mcp.call_tool("android_get_device_info", {})
+
+    async def wait_for_gone(
+        self,
+        text: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        content_desc: Optional[str] = None,
+        timeout_ms: Optional[int] = 5000
+    ) -> Dict[str, Any]:
+        """Wait for element to disappear.
+
+        Args:
+            text, resource_id, content_desc: Element selector
+            timeout_ms: Timeout in milliseconds
+
+        Returns:
+            Success confirmation dictionary
+
+        Raises:
+            MCPToolError: If element still visible after timeout
+        """
+        params = {
+            k: v for k, v in {
+                "text": text,
+                "resource_id": resource_id,
+                "content_desc": content_desc,
+                "timeout_ms": timeout_ms
+            }.items() if v is not None
+        }
+
+        return await self.mcp.call_tool("android_wait_for_gone", params)

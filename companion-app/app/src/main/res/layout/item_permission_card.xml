@@ -54,6 +54,6 @@
         android:backgroundTint="@color/wave_blue"
         android:text="GRANT"
         android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
-        android:textColor="#FFFFFF" />
+        android:textColor="@color/md_theme_light_onPrimary" />
 
 </LinearLayout>

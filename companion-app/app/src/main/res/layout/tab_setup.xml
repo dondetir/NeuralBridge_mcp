@@ -86,7 +86,7 @@
                 android:minHeight="36dp"
                 android:text="COPY"
                 android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
-                android:textColor="#FFFFFF" />
+                android:textColor="@color/md_theme_light_onPrimary" />
 
         </LinearLayout>
 

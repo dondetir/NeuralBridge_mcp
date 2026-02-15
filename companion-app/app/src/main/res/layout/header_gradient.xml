@@ -15,7 +15,7 @@
         android:layout_height="wrap_content"
         android:text="NeuralBridge"
         android:textAppearance="@style/TextAppearance.NeuralBridge.HeadlineLarge"
-        android:textColor="#FFFFFF"
+        android:textColor="#E0E8F0"
         android:textStyle="bold" />
 
     <LinearLayout
@@ -38,7 +38,7 @@
             android:layout_marginStart="@dimen/spacing_small"
             android:text="CHECKING STATUS..."
             android:textAppearance="@style/TextAppearance.NeuralBridge.LabelLarge"
-            android:textColor="#DDFFFFFF" />
+            android:textColor="#DDE0E8F0" />
 
     </LinearLayout>
 

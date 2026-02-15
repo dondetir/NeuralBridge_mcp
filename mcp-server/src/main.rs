@@ -270,7 +270,7 @@ impl AppState {
 
         let device_id = self.device_id.read().await;
         let device_id_str = device_id.as_ref()
-            .context("No device selected. Use --device or --auto-discover")?;
+            .context("No device selected. Call android_list_devices to see available devices, then android_select_device to connect.")?;
 
         debug!("Checking companion app permissions on device: {}", device_id_str);
 
@@ -344,7 +344,7 @@ impl AppState {
         // Get device ID
         let device_id = self.device_id.read().await;
         let device_id_str = device_id.as_ref()
-            .context("No device selected. Use --device or --auto-discover")?;
+            .context("No device selected. Call android_list_devices to see available devices, then android_select_device to connect.")?;
 
         info!("Establishing new connection to device: {}", device_id_str);
 
@@ -705,6 +705,20 @@ pub struct ScreenshotDiffParams {
 pub struct GetRecentToastsParams {
     /// Only return toasts from the last N milliseconds (default: 5000)
     pub since_ms: Option<i64>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct ListDevicesParams {
+    /// Force refresh device list (default: true)
+    pub refresh: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct SelectDeviceParams {
+    /// Device ID to select (from android_list_devices output)
+    pub device_id: String,
+    /// Auto-enable missing permissions (default: false)
+    pub auto_enable_permissions: Option<bool>,
 }
 
 // ============================================================================
@@ -3166,6 +3180,229 @@ impl NeuralBridgeServer {
 
         Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
     }
+
+    // ========================================================================
+    // DEVICE DISCOVERY & SELECTION
+    // ========================================================================
+
+    #[tool(
+        name = "android_list_devices",
+        description = "List all connected Android devices with their status. Returns device IDs, models, and companion app readiness. Use this to discover available devices before calling android_select_device. Does not require a device to be selected first."
+    )]
+    async fn android_list_devices(
+        &self,
+        Parameters(_params): Parameters<ListDevicesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        info!("Tool: android_list_devices");
+
+        // Discover devices via ADB (always refreshes)
+        let device_ids = self.state.device_manager()
+            .discover_devices()
+            .await
+            .map_err(to_mcp_error)?;
+
+        if device_ids.is_empty() {
+            let result = serde_json::json!({
+                "devices": [],
+                "total_count": 0,
+                "selected_device": null,
+            });
+            return Ok(CallToolResult::success(vec![Content::text(result.to_string())]));
+        }
+
+        // Get currently selected device
+        let selected_device = self.state.device_id.read().await.clone();
+
+        // For each device, check permissions in parallel
+        let mut device_futures = Vec::new();
+        for device_id in &device_ids {
+            let device_id_clone = device_id.clone();
+            let device_manager = self.state.device_manager().clone();
+
+            device_futures.push(async move {
+                // Get device info
+                let device_info = device_manager.get_device_info(&device_id_clone).await.ok().flatten();
+
+                // Check permissions
+                let permission_status = device_manager.check_permissions(&device_id_clone).await.ok();
+
+                (device_id_clone, device_info, permission_status)
+            });
+        }
+
+        // Execute all futures in parallel
+        let results = futures::future::join_all(device_futures).await;
+
+        // Build device list JSON
+        let devices: Vec<serde_json::Value> = results.into_iter().map(|(device_id, info, perms)| {
+            let model = info.as_ref().and_then(|i| i.model.clone()).unwrap_or_else(|| "Unknown".to_string());
+            let android_version = info.as_ref().and_then(|i| i.android_version.clone()).unwrap_or_else(|| "Unknown".to_string());
+            let state = info.as_ref().map(|i| i.state.clone()).unwrap_or_else(|| "unknown".to_string());
+
+            let companion_installed = perms.as_ref().map(|p| p.companion_installed).unwrap_or(false);
+            let accessibility_enabled = perms.as_ref().map(|p| p.accessibility_enabled).unwrap_or(false);
+            let notification_listener = perms.as_ref().map(|p| p.notification_listener_enabled).unwrap_or(false);
+            let is_ready = perms.as_ref().map(|p| p.is_ready()).unwrap_or(false);
+            let is_selected = selected_device.as_ref() == Some(&device_id);
+
+            serde_json::json!({
+                "device_id": device_id,
+                "model": model,
+                "android_version": android_version,
+                "state": state,
+                "companion_installed": companion_installed,
+                "accessibility_enabled": accessibility_enabled,
+                "notification_listener": notification_listener,
+                "is_ready": is_ready,
+                "is_selected": is_selected,
+            })
+        }).collect();
+
+        let result = serde_json::json!({
+            "devices": devices,
+            "total_count": device_ids.len(),
+            "selected_device": selected_device,
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_select_device",
+        description = "Select an Android device for all subsequent commands. Use android_list_devices first to see available devices. Establishes connection to the companion app on the selected device."
+    )]
+    async fn android_select_device(
+        &self,
+        Parameters(params): Parameters<SelectDeviceParams>,
+    ) -> Result<CallToolResult, McpError> {
+        info!("Tool: android_select_device (device_id: {})", params.device_id);
+
+        // Validate device_id format (alphanumeric + `.:-_`)
+        if !params.device_id.chars().all(|c| c.is_alphanumeric() || c == '.' || c == ':' || c == '-' || c == '_') {
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "Invalid device_id format: '{}'. Must contain only alphanumeric characters and '.:-_'",
+                params.device_id
+            ))]));
+        }
+
+        // Verify device exists in ADB
+        let discovered_devices = self.state.device_manager()
+            .discover_devices()
+            .await
+            .map_err(to_mcp_error)?;
+
+        if !discovered_devices.contains(&params.device_id) {
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "Device '{}' not found. Run android_list_devices to see available devices.",
+                params.device_id
+            ))]));
+        }
+
+        // Disconnect current device if one is selected
+        {
+            let current_device = self.state.device_id.read().await;
+            if current_device.is_some() {
+                info!("Disconnecting current device...");
+                drop(current_device); // Release read lock
+
+                // Clear connection
+                self.state.clear_connection().await;
+
+                // Remove port forwarding
+                if let Err(e) = self.state.device_manager().remove_port_forwarding(&params.device_id).await {
+                    warn!("Failed to remove port forwarding (non-fatal): {}", e);
+                }
+
+                // Reset permissions checked flag
+                self.state.permissions_checked.store(false, std::sync::atomic::Ordering::SeqCst);
+            }
+        }
+
+        // Set new device
+        {
+            let mut device_id_write = self.state.device_id.write().await;
+            *device_id_write = Some(params.device_id.clone());
+        }
+
+        // Set auto_enable_permissions flag if requested
+        let auto_enable = params.auto_enable_permissions.unwrap_or(false);
+        self.state.auto_enable_permissions.store(auto_enable, std::sync::atomic::Ordering::SeqCst);
+
+        // Eagerly connect to the device
+        info!("Establishing connection to device: {}", params.device_id);
+
+        // Check permissions (auto-enable if requested)
+        if let Err(e) = self.state.check_companion_ready(auto_enable).await {
+            // Get permission status for error message
+            let permission_status = self.state.device_manager()
+                .check_permissions(&params.device_id)
+                .await
+                .map_err(to_mcp_error)?;
+
+            let result = serde_json::json!({
+                "success": false,
+                "device_id": params.device_id,
+                "companion_status": "not_ready",
+                "permissions": {
+                    "companion_installed": permission_status.companion_installed,
+                    "accessibility_enabled": permission_status.accessibility_enabled,
+                    "notification_listener": permission_status.notification_listener_enabled,
+                },
+                "error": format!("Device selected but companion app not ready: {}", e),
+            });
+
+            return Ok(CallToolResult::success(vec![Content::text(result.to_string())]));
+        }
+
+        // Setup port forwarding
+        if let Err(e) = self.state.device_manager().setup_port_forwarding(&params.device_id).await {
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "Failed to setup port forwarding: {}",
+                e
+            ))]));
+        }
+
+        // Establish TCP connection
+        match self.state.get_connection().await {
+            Ok(_conn) => {
+                // Get device info for response
+                let device_info = self.state.device_manager()
+                    .get_device_info(&params.device_id)
+                    .await
+                    .map_err(to_mcp_error)?;
+
+                let permission_status = self.state.device_manager()
+                    .check_permissions(&params.device_id)
+                    .await
+                    .map_err(to_mcp_error)?;
+
+                let model = device_info
+                    .as_ref()
+                    .and_then(|i| i.model.clone())
+                    .unwrap_or_else(|| "Unknown".to_string());
+
+                let result = serde_json::json!({
+                    "success": true,
+                    "device_id": params.device_id,
+                    "model": model,
+                    "companion_status": "connected",
+                    "permissions": {
+                        "companion_installed": permission_status.companion_installed,
+                        "accessibility_enabled": permission_status.accessibility_enabled,
+                        "notification_listener": permission_status.notification_listener_enabled,
+                    }
+                });
+
+                Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+            }
+            Err(e) => {
+                Ok(CallToolResult::error(vec![Content::text(format!(
+                    "Device selected but failed to connect: {}. Companion app may not be running.",
+                    e
+                ))]))
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -3257,22 +3494,39 @@ async fn main() -> Result<()> {
         return run_check_mode(&device_manager).await;
     }
 
+    // Always discover at startup for initial state (if no device was explicitly specified)
     if device_id.is_none() {
-        error!("No device specified. Use --device <id> or --auto-discover");
-        print_usage();
-        std::process::exit(1);
+        let discovered = device_manager.discover_devices().await.unwrap_or_default();
+
+        if !discovered.is_empty() {
+            // If exactly one device and it's ready, auto-select it
+            if discovered.len() == 1 {
+                let d = &discovered[0];
+                if let Ok(status) = device_manager.check_permissions(d).await {
+                    if status.is_ready() {
+                        info!("Auto-selected only available device: {}", d);
+                        device_id = Some(d.clone());
+                    }
+                }
+            }
+            // If multiple devices, log and let agent choose
+            if device_id.is_none() && discovered.len() > 1 {
+                info!("{} devices found. Use android_list_devices + android_select_device to choose.", discovered.len());
+            }
+        }
     }
 
     let app_state = Arc::new(AppState::new(device_manager));
-    let selected_device = device_id.expect("Device ID should be set");
-    *app_state.device_id.write().await = Some(selected_device.clone());
 
-    // Set auto-enable permissions flag
-    app_state.auto_enable_permissions.store(enable_permissions, Ordering::SeqCst);
-
-    info!("Starting MCP server for device: {}", selected_device);
-    if enable_permissions {
-        info!("Auto-enable permissions: ENABLED");
+    if let Some(ref selected) = device_id {
+        *app_state.device_id.write().await = Some(selected.clone());
+        app_state.auto_enable_permissions.store(enable_permissions, Ordering::SeqCst);
+        info!("Starting MCP server for device: {}", selected);
+        if enable_permissions {
+            info!("Auto-enable permissions: ENABLED");
+        }
+    } else {
+        info!("Starting MCP server (no device pre-selected — use android_list_devices + android_select_device)");
     }
 
     let server = NeuralBridgeServer::new(app_state);
@@ -3391,16 +3645,21 @@ fn print_usage() {
     eprintln!("Usage: neuralbridge-mcp [OPTIONS]");
     eprintln!();
     eprintln!("Options:");
-    eprintln!("  --device <id>           Connect to specific device");
-    eprintln!("  --auto-discover         Auto-detect first available device");
+    eprintln!("  --device <id>           Pre-select a specific device at startup");
+    eprintln!("  --auto-discover         Auto-detect and select first ready device");
     eprintln!("  --enable-permissions    Auto-enable AccessibilityService and NotificationListener");
     eprintln!("  --check                 Run setup verification and show device status");
     eprintln!("  --help, -h              Show this help message");
+    eprintln!();
+    eprintln!("Note: All options are optional. Without --device or --auto-discover,");
+    eprintln!("the server starts without a device. AI agents can then use");
+    eprintln!("android_list_devices and android_select_device tools at runtime.");
     eprintln!();
     eprintln!("Examples:");
     eprintln!("  neuralbridge-mcp --auto-discover --enable-permissions");
     eprintln!("  neuralbridge-mcp --device emulator-5554");
     eprintln!("  neuralbridge-mcp --check");
+    eprintln!("  neuralbridge-mcp    # Start without device, select at runtime");
 }
 
 // ============================================================================

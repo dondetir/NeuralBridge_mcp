@@ -29,7 +29,7 @@
             android:backgroundTint="@color/status_error"
             android:text="CLEAR"
             android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
-            android:textColor="#FFFFFF" />
+            android:textColor="@color/md_theme_light_onPrimary" />
 
         <Button
             android:id="@+id/btnPauseLogs"
@@ -39,7 +39,7 @@
             android:backgroundTint="@color/wave_blue"
             android:text="PAUSE"
             android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
-            android:textColor="#FFFFFF" />
+            android:textColor="@color/md_theme_light_onPrimary" />
 
     </LinearLayout>
 
