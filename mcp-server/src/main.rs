@@ -427,57 +427,57 @@ impl AppState {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetUiTreeParams {
-    /// Include elements not currently visible (default: false)
+    /// Include invisible elements
     pub include_invisible: Option<bool>,
-    /// Maximum tree depth (0 = unlimited)
+    /// Max tree depth (0 = unlimited)
     pub max_depth: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ScreenshotParams {
-    /// Image quality: "full" (80%) or "thumbnail" (40%)
+    /// Quality: "full" or "thumbnail"
     pub quality: Option<String>,
-    /// Maximum width in pixels (default: 720). Use 0 for full resolution.
+    /// Max width in pixels (default 720, 0 = full)
     pub max_width: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct FindElementsParams {
-    /// Text content to match
+    /// Element text
     pub text: Option<String>,
-    /// Content description to match
+    /// Content description
     pub content_desc: Option<String>,
-    /// Resource ID to match (suffix match)
+    /// Resource ID (suffix match)
     pub resource_id: Option<String>,
-    /// Class name to match
+    /// Class name
     pub class_name: Option<String>,
-    /// Filter by clickable property
+    /// Filter clickable
     pub clickable: Option<bool>,
-    /// Filter by scrollable property
+    /// Filter scrollable
     pub scrollable: Option<bool>,
-    /// Filter by focusable property
+    /// Filter focusable
     pub focusable: Option<bool>,
-    /// Filter by long_clickable property
+    /// Filter long-clickable
     pub long_clickable: Option<bool>,
-    /// Filter by checkable property
+    /// Filter checkable
     pub checkable: Option<bool>,
-    /// Filter by checked property
+    /// Filter checked
     pub checked: Option<bool>,
-    /// Return all matches (default: false)
+    /// Return all matches
     pub find_all: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetNotificationsParams {
-    /// Return only active notifications (default: true)
+    /// Only active notifications
     pub active_only: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct EnableEventsParams {
-    /// Enable or disable event streaming
+    /// Enable/disable streaming
     pub enable: bool,
-    /// Event types to enable (empty = all events)
+    /// Event types (empty = all)
     pub event_types: Option<Vec<String>>,
 }
 
@@ -489,15 +489,15 @@ pub struct SetClipboardParams {
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct TapParams {
-    /// X coordinate (pixels)
+    /// X coordinate
     pub x: Option<i32>,
-    /// Y coordinate (pixels)
+    /// Y coordinate
     pub y: Option<i32>,
-    /// Find element by text
+    /// Element text
     pub text: Option<String>,
-    /// Find element by resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
-    /// Find element by content description
+    /// Content description
     pub content_desc: Option<String>,
 }
 
@@ -507,71 +507,71 @@ pub struct LongPressParams {
     pub x: Option<i32>,
     /// Y coordinate
     pub y: Option<i32>,
-    /// Press duration in milliseconds (default: 1000)
+    /// Duration in ms (default 1000)
     pub duration_ms: Option<i32>,
-    /// Find element by text
+    /// Element text
     pub text: Option<String>,
-    /// Find element by resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct SwipeParams {
-    /// Start X coordinate
+    /// Start X
     pub start_x: i32,
-    /// Start Y coordinate
+    /// Start Y
     pub start_y: i32,
-    /// End X coordinate
+    /// End X
     pub end_x: i32,
-    /// End Y coordinate
+    /// End Y
     pub end_y: i32,
-    /// Duration in ms (default: 300, <200 = fling)
+    /// Duration ms (default 300, <200 = fling)
     pub duration_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct DoubleTapParams {
-    /// X coordinate (pixels)
+    /// X coordinate
     pub x: Option<i32>,
-    /// Y coordinate (pixels)
+    /// Y coordinate
     pub y: Option<i32>,
-    /// Find element by text
+    /// Element text
     pub text: Option<String>,
-    /// Find element by resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
-    /// Find element by content description
+    /// Content description
     pub content_desc: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct PinchParams {
-    /// Center X coordinate
+    /// Center X
     pub center_x: i32,
-    /// Center Y coordinate
+    /// Center Y
     pub center_y: i32,
-    /// Scale factor (>1.0 = zoom in, <1.0 = zoom out)
+    /// Scale (>1.0 zoom in, <1.0 zoom out)
     pub scale: f32,
-    /// Duration in milliseconds (default: 300)
+    /// Duration ms (default 300)
     pub duration_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct DragParams {
-    /// Start X coordinate
+    /// Start X
     pub from_x: i32,
-    /// Start Y coordinate
+    /// Start Y
     pub from_y: i32,
-    /// End X coordinate
+    /// End X
     pub to_x: i32,
-    /// End Y coordinate
+    /// End Y
     pub to_y: i32,
-    /// Duration in milliseconds (default: 500)
+    /// Duration ms (default 500)
     pub duration_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct FlingParams {
-    /// Direction: "up", "down", "left", "right"
+    /// Direction: up, down, left, right
     pub direction: String,
 }
 
@@ -579,147 +579,147 @@ pub struct FlingParams {
 pub struct InputTextParams {
     /// Text to input
     pub text: String,
-    /// Find input field by current text/hint
+    /// Input field text/hint
     pub element_text: Option<String>,
-    /// Find input field by resource ID
+    /// Input field resource ID
     pub resource_id: Option<String>,
-    /// Append to existing text (default: false)
+    /// Append to existing text
     pub append: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct PressKeyParams {
-    /// Key name: "back", "home", "enter", "delete", "tab", "space", etc.
+    /// Key name (back, home, enter, delete, etc.)
     pub key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GlobalActionParams {
-    /// Action: "back", "home", "recents", "notifications", "quick_settings"
+    /// Action (back, home, recents, notifications, quick_settings)
     pub action: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct LaunchAppParams {
-    /// App package name (e.g., "com.android.chrome")
+    /// Package name (e.g. com.android.chrome)
     pub package_name: String,
-    /// Specific activity to launch
+    /// Activity to launch
     pub activity: Option<String>,
-    /// Clear existing task stack
+    /// Clear task stack
     pub clear_task: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct CloseAppParams {
-    /// App package name
+    /// Package name
     pub package_name: String,
-    /// Force-stop via ADB (default: false)
+    /// Force-stop via ADB
     pub force: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct OpenUrlParams {
-    /// URL or deep link to open
+    /// URL or deep link
     pub url: String,
-    /// Specific browser package
+    /// Browser package
     pub browser_package: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct WaitForElementParams {
-    /// Element text to wait for
+    /// Element text
     pub text: Option<String>,
-    /// Element resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
-    /// Element content description
+    /// Content description
     pub content_desc: Option<String>,
-    /// Timeout in milliseconds (default: 5000)
+    /// Timeout ms (default 5000)
     pub timeout_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct WaitForIdleParams {
-    /// Timeout in milliseconds (default: 5000)
+    /// Timeout ms (default 5000)
     pub timeout_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ClearAppDataParams {
-    /// App package name to clear data for
+    /// Package name
     pub package_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct WaitForGoneParams {
-    /// Element text to wait to disappear
+    /// Element text
     pub text: Option<String>,
-    /// Element resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
-    /// Element content description
+    /// Content description
     pub content_desc: Option<String>,
-    /// Timeout in milliseconds (default: 5000)
+    /// Timeout ms (default 5000)
     pub timeout_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ScrollToElementParams {
-    /// Element text to scroll to
+    /// Element text
     pub text: Option<String>,
-    /// Element resource ID
+    /// Resource ID
     pub resource_id: Option<String>,
-    /// Element content description
+    /// Content description
     pub content_desc: Option<String>,
-    /// Scroll direction: "up", "down", "left", "right" (default: "up" scrolls content down)
+    /// Direction: up, down, left, right
     pub direction: Option<String>,
-    /// Maximum number of scrolls to attempt (default: 20)
+    /// Max scrolls (default 20)
     pub max_scrolls: Option<i32>,
-    /// Total timeout in milliseconds (default: 30000)
+    /// Timeout ms (default 30000)
     pub timeout_ms: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetScreenContextParams {
-    /// Include all elements (true) or only interactive/text elements (false, default)
+    /// Include all elements or only interactive/text
     pub include_all_elements: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct CaptureLogcatParams {
-    /// Filter by package name
+    /// Package name filter
     pub package: Option<String>,
-    /// Log level: "V", "D", "I", "W", "E", "F" (default: "W")
+    /// Log level (V, D, I, W, E, F; default W)
     pub level: Option<String>,
-    /// Number of lines to return (default: 100)
+    /// Lines to return (default 100)
     pub lines: Option<i32>,
-    /// Return only crash reports (FATAL EXCEPTION blocks)
+    /// Only crash reports
     pub crash_only: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ScreenshotDiffParams {
-    /// Reference screenshot as base64-encoded JPEG
+    /// Reference screenshot (base64 JPEG)
     pub reference_base64: String,
-    /// Similarity threshold (0.0-1.0, default: 0.95)
+    /// Similarity threshold (0.0-1.0, default 0.95)
     pub threshold: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct GetRecentToastsParams {
-    /// Only return toasts from the last N milliseconds (default: 5000)
+    /// Recent toasts window in ms (default 5000)
     pub since_ms: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct ListDevicesParams {
-    /// Force refresh device list (default: true)
+    /// Force refresh device list
     pub refresh: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct SelectDeviceParams {
-    /// Device ID to select (from android_list_devices output)
+    /// Device ID from android_list_devices
     pub device_id: String,
-    /// Auto-enable missing permissions (default: false)
+    /// Auto-enable missing permissions
     pub auto_enable_permissions: Option<bool>,
 }
 
@@ -774,9 +774,12 @@ impl NeuralBridgeServer {
 
         let (orig_width, orig_height) = (img.width(), img.height());
 
-        // Skip downscaling if already smaller or no limit
+        // Skip downscaling if already smaller or no limit, but still convert to JPEG
         if max_width == 0 || orig_width <= max_width {
-            return Ok((image_data.to_vec(), orig_width, orig_height));
+            let mut output = Vec::new();
+            img.write_to(&mut Cursor::new(&mut output), image::ImageFormat::Jpeg)
+                .map_err(|e| anyhow::anyhow!("Failed to encode JPEG: {}", e))?;
+            return Ok((output, orig_width, orig_height));
         }
 
         // Calculate new dimensions preserving aspect ratio
@@ -875,7 +878,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_screenshot",
-        description = "Capture a screenshot. Returns image as MCP image content. Quality: 'full' (80%) or 'thumbnail' (40%). Resolution: max_width (default 720px, use 0 for full). Optimized for token efficiency - uses vision tokens instead of text. Typical latency: ~70ms."
+        description = "Capture a screenshot. Returns MCP image content (vision tokens). Quality: 'full' or 'thumbnail'. Resolution: max_width (default 720px, 0 = full)."
     )]
     async fn android_screenshot(
         &self,
@@ -937,12 +940,12 @@ impl NeuralBridgeServer {
                 let metadata = serde_json::json!({
                     "width": width,
                     "height": height,
-                    "format": "png",
+                    "format": "jpeg",
                     "method": "adb_fallback",
                 });
 
                 return Ok(CallToolResult::success(vec![
-                    Content::image(base64_image, "image/png"),
+                    Content::image(base64_image, "image/jpeg"),
                     Content::text(metadata.to_string()),
                 ]));
             }
@@ -961,15 +964,10 @@ impl NeuralBridgeServer {
             )])),
         };
 
-        // Downscale if needed
+        // Downscale if needed (always call to ensure JPEG format)
         let max_width = params.max_width.unwrap_or(720);
-        let (final_data, final_width, final_height) = if max_width > 0 && screenshot.width > max_width as i32 {
-            let (data, w, h) = Self::downscale_image(&screenshot.image_data, max_width)
-                .map_err(to_mcp_error)?;
-            (data, w, h)
-        } else {
-            (screenshot.image_data.clone(), screenshot.width as u32, screenshot.height as u32)
-        };
+        let (final_data, final_width, final_height) = Self::downscale_image(&screenshot.image_data, max_width)
+            .map_err(to_mcp_error)?;
 
         // Encode image data as base64
         let base64_image = base64::Engine::encode(
@@ -995,7 +993,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_find_elements",
-        description = "Find UI elements by text, resource ID, content description, or class name. Prefer resource_id for stable identification (e.g., 'com.app:id/login_button'). Set find_all=true to get all matches. Returns bounds for coordinate-based actions."
+        description = "Find UI elements by text, resource_id, content_desc, or class_name. Prefer resource_id for stability. Set find_all=true for all matches. Returns bounds."
     )]
     async fn android_find_elements(
         &self,
@@ -1299,12 +1297,9 @@ impl NeuralBridgeServer {
             .collect();
 
         // Step 5: Downscale screenshot to 540px (optimal for screen context)
-        let (final_data, final_width, final_height) = if screenshot_result.width > 540 {
-            Self::downscale_image(&screenshot_result.image_data, 540)
-                .map_err(to_mcp_error)?
-        } else {
-            (screenshot_result.image_data.clone(), screenshot_result.width as u32, screenshot_result.height as u32)
-        };
+        // Always call downscale_image to ensure JPEG format
+        let (final_data, final_width, final_height) = Self::downscale_image(&screenshot_result.image_data, 540)
+            .map_err(to_mcp_error)?;
 
         // Encode screenshot as base64
         let base64_screenshot = base64::engine::general_purpose::STANDARD.encode(&final_data);
@@ -1341,7 +1336,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_tap",
-        description = "Tap at (x,y) coordinates or on an element matching text/resource_id/content_desc. Typical latency: ~64ms. Network overhead: <15ms."
+        description = "Tap at (x,y) or on element by text/resource_id/content_desc."
     )]
     async fn android_tap(
         &self,
@@ -1437,7 +1432,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_long_press",
-        description = "Long press at coordinates or element. Default duration: 1000ms. Use for triggering context menus, selecting text, or activating long-press actions."
+        description = "Long press at coordinates or element (default 1000ms). For context menus, text selection, or long-press actions."
     )]
     async fn android_long_press(
         &self,
@@ -1514,7 +1509,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_swipe",
-        description = "Swipe from (start_x,start_y) to (end_x,end_y). Default duration: 300ms. Duration <200ms creates a fast fling gesture. Use for scrolling, swiping between pages, or dismissing items."
+        description = "Swipe from (start_x,start_y) to (end_x,end_y). Default 300ms, <200ms = fling. For scrolling, page navigation, or dismissing."
     )]
     async fn android_swipe(
         &self,
@@ -1565,7 +1560,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_double_tap",
-        description = "Double tap at (x,y) coordinates or on an element matching text/resource_id/content_desc. Typical latency: ~203ms (includes 100ms gap between taps). Network overhead: <15ms."
+        description = "Double tap at (x,y) or on element by text/resource_id/content_desc."
     )]
     async fn android_double_tap(
         &self,
@@ -1639,7 +1634,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_pinch",
-        description = "Pinch zoom gesture. Scale >1.0 = zoom in, <1.0 = zoom out. Typical latency: ~305ms (includes gesture duration). Example: scale=2.0 zooms in 2x, scale=0.5 zooms out 50%."
+        description = "Pinch zoom gesture. Scale >1.0 = zoom in, <1.0 = zoom out."
     )]
     async fn android_pinch(
         &self,
@@ -1687,7 +1682,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_drag",
-        description = "Drag from (from_x,from_y) to (to_x,to_y). Default duration: 500ms. Typical latency: ~508ms (includes specified duration). Use for dragging list items, sliders, or drag-and-drop operations."
+        description = "Drag from (from_x,from_y) to (to_x,to_y). Default 500ms. For list items, sliders, or drag-and-drop."
     )]
     async fn android_drag(
         &self,
@@ -1738,7 +1733,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_fling",
-        description = "Fling in a direction: up, down, left, right. Typical latency: ~153-158ms. Fast gesture for scrolling lists, pages, or continuous content. Directions: 'up' (scroll down content), 'down' (scroll up content), 'left' (next page), 'right' (previous page)."
+        description = "Fast fling gesture: up (scroll down), down (scroll up), left (next), right (previous). For lists, pages, continuous content."
     )]
     async fn android_fling(
         &self,
@@ -1793,7 +1788,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_input_text",
-        description = "Type text into an input field. Find field by element_text or resource_id. Omit selector to type into currently focused field. Set append=true to add to existing text (default: replace). Uses clipboard + paste for fast input."
+        description = "Type text into input field by element_text or resource_id. Omit selector for focused field. Set append=true to add text."
     )]
     async fn android_input_text(
         &self,
@@ -1870,7 +1865,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_press_key",
-        description = "Press a key: 'back', 'home', 'enter', 'delete', 'tab', 'volume_up', etc."
+        description = "Press key: back, home, enter, delete, tab, volume_up, etc."
     )]
     async fn android_press_key(
         &self,
@@ -1938,7 +1933,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_global_action",
-        description = "System action: 'back', 'home', 'recents', 'notifications', 'quick_settings'."
+        description = "System action: back, home, recents, notifications, quick_settings."
     )]
     async fn android_global_action(
         &self,
@@ -2001,7 +1996,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_launch_app",
-        description = "Launch an app by package name (e.g., 'com.android.chrome'). Optionally specify activity for direct launch. Set clear_task=true to clear existing task stack (fresh start). Fast path via companion app."
+        description = "Launch app by package name. Optional: activity, clear_task=true for fresh start."
     )]
     async fn android_launch_app(
         &self,
@@ -2064,7 +2059,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_close_app",
-        description = "Close an app. Default: graceful close via companion app (fast path ~100ms). Set force=true for ADB force-stop (slow path ~200-500ms, kills all processes immediately). Use force=true for stuck or crashed apps."
+        description = "Close app. Default: graceful. Set force=true for ADB force-stop (for stuck/crashed apps)."
     )]
     async fn android_close_app(
         &self,
@@ -2130,7 +2125,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_clear_app_data",
-        description = "Clear all app data (cache, databases, shared preferences) for a package. Equivalent to Settings > Apps > Clear Data. Uses ADB shell command."
+        description = "Clear all app data (cache, databases, preferences). Equivalent to Settings > Apps > Clear Data."
     )]
     async fn android_clear_app_data(
         &self,
@@ -2209,7 +2204,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_wait_for_element",
-        description = "Wait for a UI element to appear. Default timeout: 5000ms. Use instead of fixed delays when waiting for loading, navigation, or UI updates. Returns found=false on timeout (not an error)."
+        description = "Wait for UI element to appear (default 5000ms). Use for loading, navigation, or UI updates. Returns found=false on timeout."
     )]
     async fn android_wait_for_element(
         &self,
@@ -2286,7 +2281,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_wait_for_gone",
-        description = "Wait until a UI element disappears from the screen. Useful for waiting for loading dialogs, splash screens, or progress indicators to dismiss. Returns found=false when element is gone (success), found=true if still present after timeout."
+        description = "Wait for element to disappear. For loading dialogs, splash screens, progress indicators. Returns found=false when gone."
     )]
     async fn android_wait_for_gone(
         &self,
@@ -2650,7 +2645,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_enable_events",
-        description = "Enable or disable event streaming from the device (UI changes, notifications, toasts, crashes). Event types: 'ui_change', 'notification_posted', 'toast_shown', 'app_crash'. Leave event_types empty for all events. Events are buffered (max 100, circular buffer)."
+        description = "Enable/disable event streaming (UI changes, notifications, toasts, crashes). Event types: ui_change, notification_posted, toast_shown, app_crash. Empty = all."
     )]
     async fn android_enable_events(
         &self,
@@ -2706,7 +2701,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_get_notifications",
-        description = "Get current notifications. Returns title, text, package, timestamp, and clearable status. Set active_only=false to include dismissed notifications. Requires NotificationListenerService permission (granted in device Settings → Notifications → Notification access)."
+        description = "Get notifications (title, text, package, timestamp, clearable). Set active_only=false for dismissed. Requires NotificationListenerService permission."
     )]
     async fn android_get_notifications(
         &self,
@@ -2772,7 +2767,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_get_clipboard",
-        description = "Get clipboard content via ADB (slow path ~200-500ms). Works on Android 10+ where background clipboard access is restricted. Requires ADB connection. Use after android_set_clipboard to verify, or to read user-copied content."
+        description = "Get clipboard via ADB. For Android 10+ where background access is restricted. Requires ADB connection."
     )]
     async fn android_get_clipboard(&self) -> Result<CallToolResult, McpError> {
         info!("Tool: android_get_clipboard");
@@ -2800,7 +2795,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_set_clipboard",
-        description = "Set clipboard content. Fast path via companion app (~2ms). Use for sharing text between apps, or before android_input_text as a workaround for special characters."
+        description = "Set clipboard content. For sharing text or before input_text for special characters."
     )]
     async fn android_set_clipboard(
         &self,
@@ -2848,7 +2843,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_capture_logcat",
-        description = "Capture logcat output for debugging. Filter by package, log level, or crash reports. Returns recent log lines from the device. Slow path via ADB (~200-500ms)."
+        description = "Capture logcat for debugging. Filter by package, level, or crash reports."
     )]
     async fn android_capture_logcat(
         &self,
@@ -2891,7 +2886,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_screenshot_diff",
-        description = "Compare a reference screenshot with the current screen. Returns a similarity score (0.0-1.0) and whether the screens match within the threshold. Use for visual regression testing and detecting UI changes."
+        description = "Compare reference screenshot with current screen. Returns similarity score (0.0-1.0) and match status. For visual regression testing."
     )]
     async fn android_screenshot_diff(
         &self,
@@ -2998,7 +2993,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_get_recent_toasts",
-        description = "Get recently shown toast messages. Requires event streaming to be enabled first via android_enable_events. Returns toasts from the event buffer."
+        description = "Get recent toast messages. Requires android_enable_events first."
     )]
     async fn android_get_recent_toasts(
         &self,
@@ -3044,7 +3039,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_pull_to_refresh",
-        description = "Perform a pull-to-refresh gesture. Swipes down from the top portion of the screen. Useful for refreshing content in apps that support pull-to-refresh."
+        description = "Pull-to-refresh gesture. Swipes down from top to refresh content."
     )]
     async fn android_pull_to_refresh(&self) -> Result<CallToolResult, McpError> {
         info!("Tool: android_pull_to_refresh");
@@ -3094,7 +3089,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_dismiss_keyboard",
-        description = "Dismiss the on-screen keyboard if it is currently visible. Uses the system back action, which is the most reliable method across Android versions."
+        description = "Dismiss on-screen keyboard via system back action."
     )]
     async fn android_dismiss_keyboard(&self) -> Result<CallToolResult, McpError> {
         info!("Tool: android_dismiss_keyboard");
@@ -3131,7 +3126,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_accessibility_audit",
-        description = "Audit the current screen for accessibility issues. Checks for missing content descriptions, small touch targets (<48dp), and non-focusable interactive elements. Returns a list of violations with element information."
+        description = "Audit screen for accessibility issues: missing content descriptions, small touch targets (<48dp), non-focusable interactive elements."
     )]
     async fn android_accessibility_audit(&self) -> Result<CallToolResult, McpError> {
         info!("Tool: android_accessibility_audit");
@@ -3251,7 +3246,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_list_devices",
-        description = "List all connected Android devices with their status. Returns device IDs, models, and companion app readiness. Use this to discover available devices before calling android_select_device. Does not require a device to be selected first."
+        description = "List connected devices with status (IDs, models, app readiness). Use before android_select_device."
     )]
     async fn android_list_devices(
         &self,
@@ -3333,7 +3328,7 @@ impl NeuralBridgeServer {
 
     #[tool(
         name = "android_select_device",
-        description = "Select an Android device for all subsequent commands. Use android_list_devices first to see available devices. Establishes connection to the companion app on the selected device."
+        description = "Select device for all commands. Use android_list_devices first. Establishes companion app connection."
     )]
     async fn android_select_device(
         &self,
