@@ -76,7 +76,9 @@ impl AdbExecutor {
             }
         }
 
-        bail!("ADB not found in PATH or ANDROID_HOME. Please install Android SDK Platform-Tools.")
+        // Fall back to "adb" on PATH — fail at runtime (tool calls) with clear errors rather than crashing at startup
+        warn!("ADB not found in expected locations. MCP server will start but ADB-dependent tools will fail until ADB is configured.");
+        Ok(PathBuf::from("adb"))
     }
 
     /// Check if ADB is installed and accessible
@@ -229,16 +231,22 @@ impl AdbExecutor {
     }
 
     /// Uninstall package from device
-    pub async fn uninstall_package(&self, device_id: &str, package_name: &str) -> Result<()> {
+    ///
+    /// # Arguments
+    /// * `keep_data` - If true, passes `-k` flag to preserve app data/cache after removal
+    pub async fn uninstall_package(&self, device_id: &str, package_name: &str, keep_data: bool) -> Result<()> {
         // Validate package name before proceeding
         Self::validate_package_name(package_name)?;
 
-        debug!("Uninstalling package {} from device {}", package_name, device_id);
+        debug!("Uninstalling package {} from device {} (keep_data={})", package_name, device_id, keep_data);
 
-        let output = self.execute_command(&[
-            "-s", device_id,
-            "uninstall", package_name
-        ]).await?;
+        let mut args = vec!["-s", device_id, "uninstall"];
+        if keep_data {
+            args.push("-k");
+        }
+        args.push(package_name);
+
+        let output = self.execute_command(&args).await?;
 
         if output.contains("Success") {
             debug!("Package uninstalled successfully");
@@ -298,6 +306,26 @@ impl AdbExecutor {
         ]).await?;
 
         debug!("Permission granted successfully");
+        Ok(())
+    }
+
+    /// Revoke runtime permission from app
+    ///
+    /// Only works for runtime (dangerous) permissions. Install-time permissions
+    /// cannot be revoked and will return an error.
+    pub async fn revoke_permission(&self, device_id: &str, package_name: &str, permission: &str) -> Result<()> {
+        // Validate package name and permission before proceeding
+        Self::validate_package_name(package_name)?;
+        Self::validate_permission(permission)?;
+
+        debug!("Revoking permission {} from {} on device {}", permission, package_name, device_id);
+
+        self.execute_command(&[
+            "-s", device_id,
+            "shell", "pm", "revoke", package_name, permission
+        ]).await?;
+
+        debug!("Permission revoked successfully");
         Ok(())
     }
 
@@ -424,6 +452,36 @@ impl AdbExecutor {
         }
 
         Ok(output)
+    }
+
+    /// List installed packages on device
+    ///
+    /// # Arguments
+    /// * `device_id` - Target device ID
+    /// * `filter` - "all" (default), "third_party" (user-installed only), "system" (system apps only)
+    ///
+    /// Returns list of package names
+    pub async fn list_packages(&self, device_id: &str, filter: &str) -> Result<Vec<String>> {
+        debug!("Listing packages on device {} (filter: {})", device_id, filter);
+
+        let mut args = vec!["-s", device_id, "shell", "pm", "list", "packages"];
+        match filter {
+            "third_party" => args.push("-3"),
+            "system"      => args.push("-s"),
+            _             => {} // "all" = no extra flag
+        }
+
+        let output = self.execute_command(&args).await?;
+
+        // Each line is "package:<name>" — strip the prefix
+        let packages = output
+            .lines()
+            .filter_map(|line| line.strip_prefix("package:"))
+            .map(|pkg| pkg.trim().to_string())
+            .filter(|pkg| !pkg.is_empty())
+            .collect();
+
+        Ok(packages)
     }
 
     /// Get device information
@@ -563,6 +621,24 @@ mod tests {
         // Too long
         let long_perm = "android.".to_string() + &"a".repeat(260);
         assert!(AdbExecutor::validate_permission(&long_perm).is_err());
+    }
+
+    #[test]
+    fn test_revoke_permission_validates_package() {
+        // Invalid package names are rejected before any ADB call
+        assert!(AdbExecutor::validate_package_name("").is_err());
+        assert!(AdbExecutor::validate_package_name("nodots").is_err());
+        assert!(AdbExecutor::validate_package_name("com.app;evil").is_err());
+        assert!(AdbExecutor::validate_package_name("com.valid.package").is_ok());
+    }
+
+    #[test]
+    fn test_revoke_permission_validates_permission() {
+        // Invalid permissions are rejected before any ADB call
+        assert!(AdbExecutor::validate_permission("").is_err());
+        assert!(AdbExecutor::validate_permission("CAMERA").is_err());
+        assert!(AdbExecutor::validate_permission("android.permission;evil").is_err());
+        assert!(AdbExecutor::validate_permission("android.permission.CAMERA").is_ok());
     }
 
     #[test]

@@ -650,6 +650,44 @@ pub struct ClearAppDataParams {
 }
 
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct ListAppsParams {
+    /// Filter: "all" (default), "third_party" (user-installed only), "system" (system apps only)
+    pub filter: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct InstallAppParams {
+    /// Absolute path to the APK file on the host machine
+    pub apk_path: String,
+    /// Replace existing installation if present (default true)
+    pub replace: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct UninstallAppParams {
+    /// Package name (e.g. com.example.app)
+    pub package_name: String,
+    /// Keep app data and cache after removal (default false)
+    pub keep_data: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct GrantPermissionParams {
+    /// Package name (e.g. com.example.app)
+    pub package_name: String,
+    /// Android permission string (e.g. android.permission.CAMERA)
+    pub permission: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+pub struct RevokePermissionParams {
+    /// Package name (e.g. com.example.app)
+    pub package_name: String,
+    /// Android permission string (e.g. android.permission.CAMERA)
+    pub permission: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 pub struct WaitForGoneParams {
     /// Element text
     pub text: Option<String>,
@@ -2148,6 +2186,166 @@ impl NeuralBridgeServer {
             "success": true,
             "package_name": params.package_name,
             "message": "App data cleared successfully",
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_list_apps",
+        description = "List installed apps on the device. Filter by \"all\" (default), \"third_party\" (user-installed), or \"system\" apps."
+    )]
+    async fn android_list_apps(
+        &self,
+        Parameters(params): Parameters<ListAppsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let filter = params.filter.as_deref().unwrap_or("all");
+        info!("Tool: android_list_apps(filter={})", filter);
+
+        // Validate filter value
+        if !matches!(filter, "all" | "third_party" | "system") {
+            return Ok(CallToolResult::error(vec![Content::text(format!(
+                "Invalid filter '{}'. Must be one of: all, third_party, system",
+                filter
+            ))]));
+        }
+
+        // Get device ID
+        let device_id = self.state.device_id.read().await;
+        let device_id_str = device_id.as_ref()
+            .ok_or_else(|| to_mcp_error(anyhow::anyhow!("No device selected. Call android_list_devices first.")))?;
+
+        // Execute ADB pm list packages (SLOW PATH)
+        let adb = self.state.device_manager().adb();
+        let packages = adb.list_packages(device_id_str, filter).await
+            .map_err(|e| to_mcp_error(anyhow::anyhow!("Failed to list packages: {}", e)))?;
+
+        let result = serde_json::json!({
+            "packages": packages,
+            "count": packages.len(),
+            "filter": filter,
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_install_app",
+        description = "Install an APK on the device from a path on the host machine. Set replace=true (default) to overwrite an existing installation."
+    )]
+    async fn android_install_app(
+        &self,
+        Parameters(params): Parameters<InstallAppParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let replace = params.replace.unwrap_or(true);
+        info!("Tool: android_install_app({}, replace={})", params.apk_path, replace);
+
+        // Get device ID
+        let device_id = self.state.device_id.read().await;
+        let device_id_str = device_id.as_ref()
+            .ok_or_else(|| to_mcp_error(anyhow::anyhow!("No device selected. Call android_list_devices first.")))?;
+
+        // Execute ADB install (SLOW PATH)
+        let adb = self.state.device_manager().adb();
+        adb.install_apk(device_id_str, &params.apk_path, replace).await
+            .map_err(|e| to_mcp_error(anyhow::anyhow!("Failed to install APK: {}", e)))?;
+
+        let result = serde_json::json!({
+            "success": true,
+            "apk_path": params.apk_path,
+            "replace": replace,
+            "message": "APK installed successfully",
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_uninstall_app",
+        description = "Uninstall an app from the device by package name. Set keep_data=true to preserve app data and cache after removal."
+    )]
+    async fn android_uninstall_app(
+        &self,
+        Parameters(params): Parameters<UninstallAppParams>,
+    ) -> Result<CallToolResult, McpError> {
+        let keep_data = params.keep_data.unwrap_or(false);
+        info!("Tool: android_uninstall_app({}, keep_data={})", params.package_name, keep_data);
+
+        // Get device ID
+        let device_id = self.state.device_id.read().await;
+        let device_id_str = device_id.as_ref()
+            .ok_or_else(|| to_mcp_error(anyhow::anyhow!("No device selected. Call android_list_devices first.")))?;
+
+        // Execute ADB uninstall (SLOW PATH)
+        let adb = self.state.device_manager().adb();
+        adb.uninstall_package(device_id_str, &params.package_name, keep_data).await
+            .map_err(|e| to_mcp_error(anyhow::anyhow!("Failed to uninstall app: {}", e)))?;
+
+        let result = serde_json::json!({
+            "success": true,
+            "package_name": params.package_name,
+            "keep_data": keep_data,
+            "message": "App uninstalled successfully",
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_grant_permission",
+        description = "Grant a runtime permission to an app. Use for dangerous permissions (camera, location, microphone, storage, contacts, etc.)."
+    )]
+    async fn android_grant_permission(
+        &self,
+        Parameters(params): Parameters<GrantPermissionParams>,
+    ) -> Result<CallToolResult, McpError> {
+        info!("Tool: android_grant_permission({}, {})", params.package_name, params.permission);
+
+        // Get device ID
+        let device_id = self.state.device_id.read().await;
+        let device_id_str = device_id.as_ref()
+            .ok_or_else(|| to_mcp_error(anyhow::anyhow!("No device selected. Call android_list_devices first.")))?;
+
+        // Execute ADB grant (SLOW PATH)
+        let adb = self.state.device_manager().adb();
+        adb.grant_permission(device_id_str, &params.package_name, &params.permission).await
+            .map_err(|e| to_mcp_error(anyhow::anyhow!("Failed to grant permission: {}", e)))?;
+
+        let result = serde_json::json!({
+            "success": true,
+            "package_name": params.package_name,
+            "permission": params.permission,
+            "message": "Permission granted successfully",
+        });
+
+        Ok(CallToolResult::success(vec![Content::text(result.to_string())]))
+    }
+
+    #[tool(
+        name = "android_revoke_permission",
+        description = "Revoke a runtime permission from an app. Only works for runtime (dangerous) permissions — install-time permissions cannot be revoked."
+    )]
+    async fn android_revoke_permission(
+        &self,
+        Parameters(params): Parameters<RevokePermissionParams>,
+    ) -> Result<CallToolResult, McpError> {
+        info!("Tool: android_revoke_permission({}, {})", params.package_name, params.permission);
+
+        // Get device ID
+        let device_id = self.state.device_id.read().await;
+        let device_id_str = device_id.as_ref()
+            .ok_or_else(|| to_mcp_error(anyhow::anyhow!("No device selected. Call android_list_devices first.")))?;
+
+        // Execute ADB revoke (SLOW PATH)
+        let adb = self.state.device_manager().adb();
+        adb.revoke_permission(device_id_str, &params.package_name, &params.permission).await
+            .map_err(|e| to_mcp_error(anyhow::anyhow!("Failed to revoke permission: {}", e)))?;
+
+        let result = serde_json::json!({
+            "success": true,
+            "package_name": params.package_name,
+            "permission": params.permission,
+            "message": "Permission revoked successfully",
         });
 
         Ok(CallToolResult::success(vec![Content::text(result.to_string())]))

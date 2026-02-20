@@ -17,6 +17,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
@@ -45,6 +47,8 @@ class ScreenshotPipeline(
         private const val TAG = "ScreenshotPipeline"
         private const val VIRTUAL_DISPLAY_NAME = "NeuralBridge-Screenshot"
     }
+
+    private val captureMutex = Mutex()
 
     // MediaProjection components
     private var mediaProjection: MediaProjection? = null
@@ -101,27 +105,29 @@ class ScreenshotPipeline(
      * @param quality JPEG quality level
      * @return JPEG-encoded screenshot bytes
      */
-    suspend fun capture(quality: ScreenshotQuality): ByteArray = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
+    suspend fun capture(quality: ScreenshotQuality): ByteArray = captureMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
 
-        try {
-            // Try MediaProjection path first
-            val bitmap = captureViaMediaProjection()
+            try {
+                // Try MediaProjection path first
+                val bitmap = captureViaMediaProjection()
 
-            // Encode to JPEG
-            val jpegBytes = encodeToJpeg(bitmap, quality)
+                // Encode to JPEG
+                val jpegBytes = encodeToJpeg(bitmap, quality)
 
-            val elapsedMs = System.currentTimeMillis() - startTime
-            Log.i(TAG, "Screenshot captured: ${jpegBytes.size} bytes in ${elapsedMs}ms")
+                val elapsedMs = System.currentTimeMillis() - startTime
+                Log.i(TAG, "Screenshot captured: ${jpegBytes.size} bytes in ${elapsedMs}ms")
 
-            jpegBytes
-        } catch (e: Exception) {
-            Log.e(TAG, "MediaProjection capture failed, falling back to ADB", e)
+                jpegBytes
+            } catch (e: Exception) {
+                Log.e(TAG, "MediaProjection capture failed, falling back to ADB", e)
 
-            // Fallback to ADB screencap
-            // TODO Week 4: Implement ADB fallback
-            // This requires routing through MCP server's ADB connection
-            throw Exception("MediaProjection unavailable and ADB fallback not yet implemented", e)
+                // Fallback to ADB screencap
+                // TODO Week 4: Implement ADB fallback
+                // This requires routing through MCP server's ADB connection
+                throw Exception("MediaProjection unavailable and ADB fallback not yet implemented", e)
+            }
         }
     }
 
@@ -147,20 +153,27 @@ class ScreenshotPipeline(
                 return@suspendCancellableCoroutine
             }
 
-            reader.setOnImageAvailableListener({ imageReader ->
-                try {
-                    val img = imageReader.acquireLatestImage()
-                    if (img != null) {
-                        continuation.resume(img)
-                    } else {
-                        continuation.resumeWithException(IllegalStateException("acquireLatestImage returned null"))
-                    }
-                } catch (e: Exception) {
-                    continuation.resumeWithException(e)
+            // Drain stale images from previous capture to prevent buffer overflow
+            var stale = reader.acquireLatestImage()
+            while (stale != null) {
+                stale.close()
+                stale = reader.acquireLatestImage()
+            }
+
+            reader.setOnImageAvailableListener({ ir ->
+                // Remove listener FIRST — prevents double-fire if a second frame arrives
+                // before the coroutine resumes and unregisters it
+                ir.setOnImageAvailableListener(null, null)
+                val img = ir.acquireLatestImage()
+                if (img != null) {
+                    continuation.resume(img)
+                } else {
+                    continuation.resumeWithException(
+                        IllegalStateException("acquireLatestImage returned null")
+                    )
                 }
             }, android.os.Handler(android.os.Looper.getMainLooper()))
 
-            // Handle cancellation
             continuation.invokeOnCancellation {
                 reader.setOnImageAvailableListener(null, null)
             }
@@ -315,11 +328,16 @@ class ScreenshotPipeline(
         // Try JNI encoder first (faster)
         try {
             val jpegBytes = encodeJpegNative(bitmap, quality.jpegQuality)
-            val elapsedMs = System.currentTimeMillis() - startTime
-            Log.d(TAG, "JPEG encoded via JNI: ${jpegBytes.size} bytes in ${elapsedMs}ms")
-            return jpegBytes
+            if (jpegBytes != null && jpegBytes.isNotEmpty()) {
+                val elapsedMs = System.currentTimeMillis() - startTime
+                Log.d(TAG, "JPEG encoded via JNI: ${jpegBytes.size} bytes in ${elapsedMs}ms")
+                return jpegBytes
+            }
+            Log.w(TAG, "JNI returned empty/null, falling back to Bitmap.compress()")
         } catch (e: UnsatisfiedLinkError) {
             Log.w(TAG, "JNI JPEG encoder not available, using fallback")
+        } catch (e: Exception) {
+            Log.w(TAG, "JNI JPEG encoding failed, using fallback", e)
         }
 
         // Fallback to Android Bitmap.compress()

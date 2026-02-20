@@ -1,6 +1,7 @@
 <!--
   NeuralBridge Adaptive Icon - Background Layer
-  Teal-to-indigo gradient (#004D61 → #1A237E)
+  Wave Blue-to-Purple gradient (#5E72E4 → #825EE4)
+  Matches the brand gradient defined in wave-bridge.svg source.
   108dp canvas matching adaptive icon specifications
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -19,8 +20,8 @@
                 android:startY="0"
                 android:endX="108"
                 android:endY="108"
-                android:startColor="#004D61"
-                android:endColor="#1A237E"/>
+                android:startColor="#5E72E4"
+                android:endColor="#825EE4"/>
         </aapt:attr>
     </path>
 </vector>
