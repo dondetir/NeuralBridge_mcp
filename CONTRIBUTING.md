@@ -14,7 +14,7 @@ NeuralBridge enables AI agents to control Android devices with <100ms latency us
    git clone git@github.com:YOUR_USERNAME/neuralBridge.git
    cd neuralBridge
    ```
-3. **Set up development environment** (see [CLAUDE.md](CLAUDE.md))
+3. **Set up development environment** (see [README](README.md#getting-started))
 4. **Create a feature branch:**
    ```bash
    git checkout -b feature/your-feature-name
@@ -97,7 +97,7 @@ Add android_pinch tool for zoom gestures
 1. **Create a feature branch** from `main`
 2. **Make your changes** following style guidelines
 3. **Add/update tests** for your changes
-4. **Update documentation** (README, CLAUDE.md, code comments)
+4. **Update documentation** (README, code comments)
 5. **Ensure all tests pass:**
    ```bash
    # Rust tests
@@ -140,8 +140,9 @@ By contributing to NeuralBridge, you agree that your contributions will be licen
 
 ## 💬 Getting Help
 
-- **Documentation:** See [CLAUDE.md](CLAUDE.md) for development setup
-- **Architecture:** See [docs/prd.md](docs/prd.md) for technical details
+- **Documentation:** See the [README](README.md) for setup and usage
+- **MCP Server:** See [mcp-server/README.md](mcp-server/README.md) for tool reference
+- **Companion App:** See [companion-app/README.md](companion-app/README.md) for Android setup
 - **Questions:** Open a GitHub Discussion
 - **Bugs:** Open a GitHub Issue
 

@@ -7,12 +7,12 @@ Quick installation scripts for NeuralBridge MCP Server.
 ### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourorg/neuralbridge/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/neuralbridge/neuralbridge/main/scripts/install.sh | bash
 ```
 
 Or download and run manually:
 ```bash
-wget https://raw.githubusercontent.com/yourorg/neuralbridge/main/scripts/install.sh
+wget https://raw.githubusercontent.com/neuralbridge/neuralbridge/main/scripts/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -21,12 +21,12 @@ chmod +x install.sh
 
 Open PowerShell as Administrator:
 ```powershell
-irm https://raw.githubusercontent.com/yourorg/neuralbridge/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/neuralbridge/neuralbridge/main/scripts/install.ps1 | iex
 ```
 
 Or download and run manually:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yourorg/neuralbridge/main/scripts/install.ps1" -OutFile install.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/neuralbridge/neuralbridge/main/scripts/install.ps1" -OutFile install.ps1
 powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
@@ -56,7 +56,7 @@ If you prefer to install manually, see [DISTRIBUTION.md](../docs/DISTRIBUTION.md
 
 ### "Download failed"
 - Check internet connection
-- Verify GitHub releases exist: https://github.com/yourorg/neuralbridge/releases
+- Verify GitHub releases exist: https://github.com/neuralbridge/neuralbridge/releases
 - Try manual download and installation
 
 ## Advanced Options

@@ -246,7 +246,7 @@ All optimizations are ON by default. Disable specific ones via CLI flags:
 
 Always-on: omit empty fields, strip `"success": true`, logcat compression, meta-tools.
 
-See [`docs/token-optimization.md`](../docs/token-optimization.md) for savings estimates.
+See the [main README](../README.md#token-optimization) for savings estimates.
 
 ---
 
@@ -357,7 +357,5 @@ RUST_LOG=trace ./target/release/neuralbridge-mcp  # Protocol-level debugging
 ## See Also
 
 - [Companion App README](../companion-app/README.md) — Android app setup and permissions
-- [Token Optimization Guide](../docs/token-optimization.md) — Reducing context usage
-- [Protocol Specification](../docs/prd.md) — Complete technical architecture
 - [MCP SDK (rmcp)](https://github.com/modelcontextprotocol/rust-sdk) — Rust MCP library
 - [MCP Specification](https://modelcontextprotocol.io) — Protocol documentation

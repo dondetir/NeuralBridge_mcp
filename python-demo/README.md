@@ -1,6 +1,6 @@
 # NeuralBridge Python MCP Demo Client
 
-> **Comprehensive feature showcase for Phase 1+2** - Demonstrating all 24 MCP tools with real-world scenarios
+> **Comprehensive feature showcase** — Demonstrating all 24 MCP tools with real-world scenarios
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![MCP SDK](https://img.shields.io/badge/MCP-0.9.0+-green.svg)](https://pypi.org/project/mcp/)
@@ -11,7 +11,7 @@
 This Python MCP demo client showcases NeuralBridge's Android automation capabilities through **10 stunning interactive scenarios**. It uses the official MCP Python SDK to communicate with the Rust MCP server, demonstrating how AI agents will integrate with NeuralBridge in production.
 
 **Key Features:**
-- ✅ All 24 MCP tools (16 Phase 1 + 8 Phase 2)
+- ✅ All 24 MCP tools
 - ✅ 10 diverse scenarios: AI intelligence, real-world workflows, technical excellence
 - ✅ <100ms latency validation for fast-path operations
 - ✅ Beautiful terminal UI with rich formatting
@@ -302,10 +302,10 @@ python-demo/
 - `android_input_text` - Type text
 - `android_press_key` - Press hardware key
 - `android_global_action` - Global actions (home, recents, etc.)
-- `android_double_tap` - Double tap gesture (Phase 2)
-- `android_pinch` - Pinch zoom (Phase 2)
-- `android_drag` - Drag gesture (Phase 2)
-- `android_fling` - Fling scroll (Phase 2)
+- `android_double_tap` - Double tap gesture
+- `android_pinch` - Pinch zoom
+- `android_drag` - Drag gesture
+- `android_fling` - Fling scroll
 
 ### MANAGE (3 tools)
 - `android_launch_app` - Launch app by package
@@ -462,7 +462,7 @@ MIT License - See [LICENSE](../LICENSE) for details.
 
 ## Support
 
-- **Documentation:** [docs/prd.md](../docs/prd.md)
+- **Documentation:** [README](../README.md)
 - **Issues:** [GitHub Issues](https://github.com/dondetir/neuralBridge/issues)
 
 ## Acknowledgments

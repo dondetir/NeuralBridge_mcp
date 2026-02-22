@@ -279,5 +279,4 @@ When installing on Android 15+:
 ## See Also
 
 - [MCP Server README](../mcp-server/README.md) - Server setup and tool usage
-- [Protocol Specification](../docs/prd.md) - Complete technical documentation
 - [AccessibilityService Guide](https://developer.android.com/guide/topics/ui/accessibility/service) - Android docs

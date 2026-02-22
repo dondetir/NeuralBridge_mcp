@@ -16,7 +16,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Phase-3%20Complete-success" alt="Phase 3" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.3.0-success" alt="v0.3.0" /></a>
   <a href="#mcp-tools-43"><img src="https://img.shields.io/badge/MCP%20Tools-43-brightgreen" alt="43 Tools" /></a>
   <a href="#performance"><img src="https://img.shields.io/badge/Avg%20Latency-6.4ms-brightgreen" alt="6.4ms" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 7+" /></a>
@@ -532,13 +532,11 @@ neuralbridge/
 │   └── build.gradle.kts
 │
 ├── python-demo/                    # Python MCP demo client (10 scenarios)
-├── docs/                           # Architecture spec and documentation
-│   ├── prd.md                      # Complete technical specification
-│   └── token-optimization.md       # Token savings documentation
+├── docs/                           # Documentation
 ├── scripts/                        # Setup helper scripts
 ├── CONTRIBUTING.md                 # Contribution guidelines
 ├── SECURITY.md                     # Security policy
-└── CLAUDE.md                       # Developer reference (build commands, patterns)
+└── LICENSE                         # MIT License
 ```
 
 ---
@@ -571,7 +569,7 @@ neuralbridge/
 | CI/CD headless screenshots (Android 14+) | MediaProjection requires user consent |
 | Google Play distribution | AccessibilityService policy restrictions |
 
-See [docs/prd.md](docs/prd.md#known-limitations) for the full list.
+See the [Companion App README](companion-app/README.md) for more details.
 
 ---
 
@@ -714,10 +712,10 @@ adb logcat -s NeuralBridge:V
 
 ## Roadmap
 
-- [x] **Phase 1** — Core MVP: 16 tools, TCP protocol, basic gestures
-- [x] **Phase 2** — Advanced: selectors, event streaming, notifications, advanced gestures
-- [x] **Phase 3** — Semantic resolver, scroll-to-element, accessibility audit, screenshot diff
-- [ ] **Phase 4** — Multi-device, WebView tools, CI/CD integration, visual regression
+- [x] Core MVP — 16 tools, TCP protocol, basic gestures
+- [x] Advanced gestures, selectors, event streaming, notifications
+- [x] Semantic resolver, scroll-to-element, accessibility audit, screenshot diff
+- [ ] Multi-device, WebView tools, CI/CD integration, visual regression
 
 ---
 
@@ -725,10 +723,8 @@ adb logcat -s NeuralBridge:V
 
 | Document | Description |
 |---|---|
-| [Architecture (PRD)](docs/prd.md) | Complete technical specification |
-| [Developer Guide](CLAUDE.md) | Build commands, architecture deep dive, common patterns |
-| [Token Optimization](docs/token-optimization.md) | MCP token usage and compression strategies |
-| [Known Limitations](docs/prd.md#known-limitations) | Platform constraints and workarounds |
+| [MCP Server](mcp-server/README.md) | Server setup, tool reference, configuration |
+| [Companion App](companion-app/README.md) | Android app setup and permissions |
 | [Contributing](CONTRIBUTING.md) | How to contribute, code style, PR process |
 | [Security](SECURITY.md) | Security policy and vulnerability reporting |
 | [Third-Party Licenses](THIRD-PARTY-LICENSES.md) | All dependency licenses |

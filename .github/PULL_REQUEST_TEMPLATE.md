@@ -28,5 +28,5 @@ If `.proto` files were modified:
 ## Checklist
 - [ ] Code follows existing patterns in the codebase
 - [ ] No hardcoded device IDs, IP addresses, or personal paths
-- [ ] Error messages are actionable (see Error Taxonomy in CLAUDE.md)
+- [ ] Error messages are actionable
 - [ ] Latency impact considered (<100ms target for fast path operations)

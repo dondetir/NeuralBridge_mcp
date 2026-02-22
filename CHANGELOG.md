@@ -4,7 +4,7 @@ All notable changes to NeuralBridge are documented here.
 
 ## [Unreleased]
 
-### Planned (Phase 4)
+### Planned
 - Multi-device support
 - WebView tools (`get_webview_dom`, `execute_js`, `get_webview_url`)
 - Visual regression testing pipeline
@@ -12,7 +12,7 @@ All notable changes to NeuralBridge are documented here.
 
 ---
 
-## [0.3.0] — Phase 3: Semantic Resolution & Advanced Observation
+## [0.3.0] — Semantic Resolution & Advanced Observation
 
 ### Added
 - `android_get_screen_context` — single-call screen snapshot (UI tree + screenshot)
@@ -35,7 +35,7 @@ All notable changes to NeuralBridge are documented here.
 
 ---
 
-## [0.2.0] — Phase 2: Gestures, Events & Notifications
+## [0.2.0] — Gestures, Events & Notifications
 
 ### Added
 - `android_double_tap` — double tap at coordinates or by selector
@@ -53,7 +53,7 @@ All notable changes to NeuralBridge are documented here.
 
 ---
 
-## [0.1.0] — Phase 1: Core MVP
+## [0.1.0] — Core MVP
 
 ### Added
 - Binary TCP protocol (7-byte header + protobuf) between MCP server and companion app
