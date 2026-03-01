@@ -14,22 +14,32 @@ sys.path.insert(0, str(Path(__file__).parent))
 from demo_client.mcp_client import NeuralBridgeMCPClient, MCPConnectionError
 from demo_client.android_client import AndroidClient
 from demo_client.utils.performance import LatencyTracker
-from demo_client.scenarios.scenario_1_basics import run_scenario_1_basics
-from demo_client.scenarios.scenario_2_forms import run_scenario_2_forms
-from demo_client.scenarios.scenario_3_gestures import run_scenario_3_gestures
-from demo_client.scenarios.scenario_4_events import run_scenario_4_events
-from demo_client.scenarios.scenario_5_clipboard import run_scenario_5_clipboard
-from demo_client.scenarios.scenario_6_app_lifecycle import run_scenario_6_app_lifecycle
-from demo_client.scenarios.scenario_7_stress_test import run_scenario_7_stress_test
+from demo_client.scenarios.scenario_1_discovery import run_scenario_1_discovery
+from demo_client.scenarios.scenario_2_settings import run_scenario_2_settings
+from demo_client.scenarios.scenario_3_contacts import run_scenario_3_contacts
+from demo_client.scenarios.scenario_4_gestures import run_scenario_4_gestures
+from demo_client.scenarios.scenario_5_chrome import run_scenario_5_chrome
+from demo_client.scenarios.scenario_6_multiapp import run_scenario_6_multiapp
+from demo_client.scenarios.scenario_7_events import run_scenario_7_events
+from demo_client.scenarios.scenario_8_lifecycle import run_scenario_8_lifecycle
+from demo_client.scenarios.scenario_9_accessibility import run_scenario_9_accessibility
+from demo_client.scenarios.scenario_10_recovery import run_scenario_10_recovery
+from demo_client.scenarios.scenario_11_explorer import run_scenario_11_explorer
+from demo_client.scenarios.scenario_12_stress_test import run_scenario_12_stress_test
 
 SCENARIOS = {
-    1: ("UI Inspection & Navigation", run_scenario_1_basics),
-    2: ("Form Automation", run_scenario_2_forms),
-    3: ("Advanced Gestures", run_scenario_3_gestures),
-    4: ("Event Streaming", run_scenario_4_events),
-    5: ("Clipboard Operations", run_scenario_5_clipboard),
-    6: ("App Lifecycle Management", run_scenario_6_app_lifecycle),
-    7: ("Performance Stress Test", run_scenario_7_stress_test),
+    1:  ("Device Discovery & Inspection",  run_scenario_1_discovery),
+    2:  ("Settings Navigation",            run_scenario_2_settings),
+    3:  ("Contacts App",                   run_scenario_3_contacts),
+    4:  ("Gestures",                       run_scenario_4_gestures),
+    5:  ("Chrome Browser",                 run_scenario_5_chrome),
+    6:  ("Multi-App Flow",                 run_scenario_6_multiapp),
+    7:  ("Event Streaming",                run_scenario_7_events),
+    8:  ("App Lifecycle",                  run_scenario_8_lifecycle),
+    9:  ("Accessibility Audit",            run_scenario_9_accessibility),
+    10: ("Error Recovery",                 run_scenario_10_recovery),
+    11: ("UI Explorer",                    run_scenario_11_explorer),
+    12: ("Stress Test",                    run_scenario_12_stress_test),
 }
 
 
@@ -56,7 +66,7 @@ async def main():
     # Connect
     print("Connecting to MCP server...")
     try:
-        mcp_client = NeuralBridgeMCPClient(str(mcp_server_path), device_id)
+        mcp_client = NeuralBridgeMCPClient(str(mcp_server_path), device_id, no_consolidate=True)
         await mcp_client.connect()
         print("✅ Connected!")
     except MCPConnectionError as e:

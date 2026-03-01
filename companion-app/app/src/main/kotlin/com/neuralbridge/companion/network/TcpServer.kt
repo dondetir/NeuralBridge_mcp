@@ -66,16 +66,17 @@ class TcpServer(
             while (isActive) {
                 try {
                     Log.d(TAG, "Waiting for client connection...")
-                    val clientSocket = serverSocket?.accept()
-                    if (clientSocket != null) {
-                        Log.i(TAG, "Client connected: ${clientSocket.inetAddress}")
-                        handleClient(clientSocket)
-                    }
+                    val clientSocket = serverSocket?.accept() ?: break
+                    Log.i(TAG, "Client connected: ${clientSocket.inetAddress}")
+                    handleClient(clientSocket)
                 } catch (e: SocketTimeoutException) {
                     // Timeout is ok, continue loop
                 } catch (e: IOException) {
-                    if (isActive) {
+                    // Only log if this is unexpected (not a clean shutdown)
+                    if (isActive && serverSocket != null) {
                         Log.e(TAG, "Error accepting connection", e)
+                    } else {
+                        Log.d(TAG, "Accept interrupted (server stopping)")
                     }
                 }
             }

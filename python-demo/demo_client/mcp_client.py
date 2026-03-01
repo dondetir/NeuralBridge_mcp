@@ -55,7 +55,8 @@ class NeuralBridgeMCPClient:
         self,
         mcp_server_path: str,
         device_id: str = None,
-        auto_discover: bool = False
+        auto_discover: bool = False,
+        no_consolidate: bool = False
     ):
         """Initialize MCP client.
 
@@ -68,6 +69,7 @@ class NeuralBridgeMCPClient:
         self.server_path = Path(mcp_server_path).resolve()
         self.device_id = device_id or os.environ.get("ANDROID_DEVICE_ID")
         self.auto_discover = auto_discover or self.device_id is None
+        self.no_consolidate = no_consolidate
 
         # MCP session components
         self._session: Optional[ClientSession] = None
@@ -109,6 +111,8 @@ class NeuralBridgeMCPClient:
                 args.append("--auto-discover")
             else:
                 args.extend(["--device", self.device_id])
+            if self.no_consolidate:
+                args.append("--no-consolidate")
 
             logger.info(f"Starting MCP server: {self.server_path} {' '.join(args)}")
 

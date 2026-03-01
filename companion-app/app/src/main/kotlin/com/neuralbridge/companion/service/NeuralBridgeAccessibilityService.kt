@@ -92,11 +92,9 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
         // Publish instance before conditional startup so MainActivity can query it
         instance = this
 
-        // Start foreground service
-        startForegroundService()
-
-        // Only start TCP server and request screen recording if user has enabled the toggle
+        // Only start foreground service, TCP server, and screen recording if toggle is on
         if (isEnabled()) {
+            startForegroundService()
             startTcpServer()
             requestMediaProjectionPermission()
         }
@@ -138,7 +136,7 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
         serviceScope.launch {
             try {
                 tcpServer.start()
-                Log.i(TAG, "TCP server started on port $TCP_PORT")
+                Log.d(TAG, "TCP server accept loop exited")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start TCP server", e)
             }
@@ -407,16 +405,17 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
      * Start TCP server and request MediaProjection — called when user turns on the master toggle
      */
     fun enable() {
-        if (!::tcpServer.isInitialized) {
-            startTcpServer()
-        }
+        startForegroundService()
+        startTcpServer()
         requestMediaProjectionPermission()
     }
 
     /**
-     * Stop TCP server — called when user turns off the master toggle
+     * Stop TCP server and remove notification — called when user turns off the master toggle
      */
     fun disable() {
+        @Suppress("DEPRECATION")
+        stopForeground(true)
         serviceScope.launch {
             if (::tcpServer.isInitialized) tcpServer.stop()
         }
