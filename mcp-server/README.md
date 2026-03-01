@@ -22,6 +22,9 @@ cargo build --release
 # Auto-discover first available device
 ./target/release/neuralbridge-mcp --auto-discover
 
+# Auto-discover and auto-enable permissions
+./target/release/neuralbridge-mcp --auto-discover --enable-permissions
+
 # Connect to specific device
 ./target/release/neuralbridge-mcp --device emulator-5554
 
@@ -312,7 +315,7 @@ mcp-server/
 ### Run Tests
 
 ```bash
-# Unit tests only (no device required) — 94 tests
+# Unit tests only (no device required) — 93 tests
 cargo test --lib && cargo test --bin neuralbridge-mcp
 
 # All tests including integration (device required)

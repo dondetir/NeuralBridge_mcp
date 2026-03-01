@@ -203,7 +203,7 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 ```bash
 # Clone the repository
-git clone https://github.com/anthropics/neuralbridge.git
+git clone https://github.com/dondetir/neuralBridge.git
 cd neuralbridge
 
 # Build the MCP server (Rust)
@@ -218,7 +218,7 @@ cd ..
 ```
 
 After building, you'll have:
-- MCP server binary: `mcp-server/target/release/neuralbridge-mcp` (2.8 MB)
+- MCP server binary: `mcp-server/target/release/neuralbridge-mcp` (4.4 MB)
 - Companion APK: `companion-app/app/build/outputs/apk/debug/app-debug.apk` (7.5 MB)
 
 ### Step 2: Install the Companion App
@@ -359,6 +359,11 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 | `clear_app_data` | Wipe all app data (cache, databases, prefs) | ~200ms |
 | `open_url` | Open URL in default browser | <100ms |
 | `global_action` | System actions: back, home, recents, notifications | <10ms |
+| `list_apps` | List installed apps (all or by filter) | ~200ms |
+| `install_app` | Install APK from path via ADB | ~2s |
+| `uninstall_app` | Uninstall app by package name via ADB | ~500ms |
+| `grant_permission` | Grant a runtime permission via ADB | ~200ms |
+| `revoke_permission` | Revoke a runtime permission via ADB | ~200ms |
 
 ### Wait — Synchronize with the UI
 
@@ -384,6 +389,13 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 |---|---|
 | `list_devices` | List all connected Android devices with status |
 | `select_device` | Switch active device for all subsequent commands |
+
+### Meta — Discover and explore tools
+
+| Tool | Description | Typical Latency |
+|---|---|---|
+| `search_tools` | Search available tools by name, description, or category | <5ms |
+| `describe_tools` | Get detailed description of one or all tools | <5ms |
 
 ### Selector System
 
@@ -531,7 +543,7 @@ neuralbridge/
 │   ├── design/                     # Design system documentation
 │   └── build.gradle.kts
 │
-├── python-demo/                    # Python MCP demo client (10 scenarios)
+├── python-demo/                    # Python MCP demo client (12 scenarios)
 ├── docs/                           # Documentation
 ├── scripts/                        # Setup helper scripts
 ├── CONTRIBUTING.md                 # Contribution guidelines
@@ -663,6 +675,7 @@ Options:
   --auto-discover         Automatically find and connect to a device
   --device <ID>           Connect to a specific device (e.g., emulator-5554)
   --check                 Verify setup and connection, then exit
+  --enable-permissions    Auto-enable missing device permissions via ADB
   --no-compact-tree       Disable compact UI tree format
   --no-filter-elements    Return all UI elements, not just interactive ones
   --no-compact-bounds     Use verbose bounds format
