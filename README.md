@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0 License" /></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.3.0-success" alt="v0.3.0" /></a>
   <a href="#mcp-tools-43"><img src="https://img.shields.io/badge/MCP%20Tools-43-brightgreen" alt="43 Tools" /></a>
   <a href="#performance"><img src="https://img.shields.io/badge/Avg%20Latency-6.4ms-brightgreen" alt="6.4ms" /></a>
@@ -548,7 +548,8 @@ neuralbridge/
 ├── scripts/                        # Setup helper scripts
 ├── CONTRIBUTING.md                 # Contribution guidelines
 ├── SECURITY.md                     # Security policy
-└── LICENSE                         # MIT License
+├── NOTICE                          # Attribution requirements (Apache 2.0)
+└── LICENSE                         # Apache 2.0 License
 ```
 
 ---
@@ -757,4 +758,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines. High-priority areas:
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 NeuralBridge Contributors
+[Apache 2.0](LICENSE) — Copyright 2026 NeuralBridge Contributors
+
+If you use or build upon NeuralBridge, you must include the [NOTICE](NOTICE) file
+in your distribution. We'd love a mention too:
+
+> "Powered by [NeuralBridge](https://github.com/dondetir/neuralBridge)"
