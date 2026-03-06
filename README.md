@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="companion-app/design/wave-bridge.svg" alt="NeuralBridge" width="120" />
+  <img src="android/design/wave-bridge.svg" alt="NeuralBridge" width="120" />
 </p>
 
 <h1 align="center">NeuralBridge</h1>
@@ -16,11 +16,10 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0 License" /></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.3.0-success" alt="v0.3.0" /></a>
-  <a href="#mcp-tools-43"><img src="https://img.shields.io/badge/MCP%20Tools-43-brightgreen" alt="43 Tools" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.4.0-success" alt="v0.4.0" /></a>
+  <a href="#mcp-tools-39"><img src="https://img.shields.io/badge/MCP%20Tools-39-brightgreen" alt="32 Tools" /></a>
   <a href="#performance"><img src="https://img.shields.io/badge/Avg%20Latency-6.4ms-brightgreen" alt="6.4ms" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 7+" /></a>
-  <a href="#"><img src="https://img.shields.io/badge/Rust-stable-orange?logo=rust&logoColor=white" alt="Rust" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" /></a>
 </p>
 
@@ -53,54 +52,56 @@ NeuralBridge solves all of this:
 
 ## How It Works
 
-NeuralBridge is a three-tier system. Your AI agent never talks to the phone directly — it speaks MCP, and NeuralBridge handles everything else.
+NeuralBridge is a two-tier system. Your AI agent speaks MCP over HTTP directly to the companion app — no middleware required.
 
 ```
-                          YOUR MACHINE                                    ANDROID DEVICE
-  ┌──────────────────┐                  ┌──────────────────┐              ┌──────────────────────────────┐
-  │                  │                  │                  │              │                              │
-  │    AI  Agent     │     MCP          │   NeuralBridge   │  Protobuf   │    NeuralBridge Companion    │
-  │                  │   (stdio)        │   MCP Server     │   (TCP)     │           App                │
-  │  Claude Code     │ ◄─────────────►  │                  │◄──────────► │                              │
-  │  Cursor IDE      │  Tool calls &    │  ┌────────────┐  │  port       │  ┌────────────────────────┐  │
-  │  Custom Agent    │  responses       │  │ Tool       │  │  38472      │  │ AccessibilityService   │  │
-  │                  │                  │  │ Registry   │  │  via ADB    │  │                        │  │
-  │  "tap the        │                  │  ├────────────┤  │  forward    │  │  • UI tree walking     │  │
-  │   login button"  │                  │  │ Semantic   │  │             │  │  • Gesture injection   │  │
-  │                  │                  │  │ Engine     │  │             │  │  • Event callbacks     │  │
-  │  "screenshot     │                  │  ├────────────┤  │             │  │  • Global actions      │  │
-  │   the screen"    │                  │  │ Device     │  │             │  ├────────────────────────┤  │
-  │                  │                  │  │ Manager    │  │             │  │ Screenshot Pipeline    │  │
-  │  "type hello"    │                  │  └────────────┘  │             │  │  MediaProjection →     │  │
-  │                  │                  │      Rust         │             │  │  libjpeg-turbo (JNI)   │  │
-  └──────────────────┘                  └──────────────────┘              │  ├────────────────────────┤  │
-                                                                         │  │ TCP Server + Protobuf  │  │
-                                                                         │  └────────────────────────┘  │
-                                                                         │         Kotlin + C++         │
-                                                                         └──────────────────────────────┘
+              YOUR MACHINE                                       ANDROID DEVICE
+  ┌──────────────────┐                              ┌──────────────────────────────────┐
+  │                  │                              │                                  │
+  │    AI  Agent     │   MCP over HTTP (port 7474)  │    NeuralBridge Companion App    │
+  │                  │ ◄──────────────────────────► │                                  │
+  │  Claude Code     │  Tool calls &                │  ┌──────────────────────────┐   │
+  │  Cursor IDE      │  responses                   │  │ MCP HTTP Server          │   │
+  │  Custom Agent    │                              │  │ (Ktor CIO, port 7474)    │   │
+  │                  │                              │  ├──────────────────────────┤   │
+  │  "tap the        │                              │  │ Tool Registry (32 tools) │   │
+  │   login button"  │                              │  ├──────────────────────────┤   │
+  │                  │                              │  │ AccessibilityService     │   │
+  │  "screenshot     │                              │  │  • UI tree walking       │   │
+  │   the screen"    │                              │  │  • Gesture injection     │   │
+  │                  │                              │  │  • Event callbacks       │   │
+  │  "type hello"    │                              │  ├──────────────────────────┤   │
+  │                  │                              │  │ Screenshot Pipeline      │   │
+  └──────────────────┘                              │  │  MediaProjection →       │   │
+                                                    │  │  libjpeg-turbo (JNI)    │   │
+                                                    │  └──────────────────────────┘   │
+                                                    │          Kotlin + C++            │
+                                                    └──────────────────────────────────┘
 ```
 
 ### Data Flow: What happens when you say "tap Login"
 
 ```
-  Step 1                Step 2                Step 3               Step 4
-  Agent sends           MCP Server            Companion App        Response
-  MCP tool call         resolves selector     executes gesture     flows back
+  Step 1                Step 2               Step 3
+  Agent sends           Companion App        Response
+  MCP tool call         resolves & executes  flows back
 
-  ┌─────────┐          ┌─────────────┐       ┌──────────────┐     ┌─────────┐
-  │  Agent   │  ──►    │  Semantic    │  ──►  │   Gesture    │ ──► │  Agent   │
-  │          │         │  Engine     │        │   Engine     │     │          │
-  │ tap(text │ stdio   │             │  TCP   │              │ TCP │ "tapped  │
-  │ ="Login")│ <1ms    │ "Login" →   │  <5ms  │ dispatchGesture  │ <1ms │  at      │
-  │          │         │ (540, 820)  │        │ at (540,820) │     │ (540,820)│
-  └─────────┘          └─────────────┘        └──────────────┘     └─────────┘
-                                                    │
-                                                    ▼  <50ms
-                                              ┌──────────────┐
-                                              │  Android OS   │
-                                              │  processes    │
-                                              │  the tap      │
-                                              └──────────────┘
+  ┌─────────┐          ┌──────────────┐      ┌─────────┐
+  │  Agent   │  ──►    │  Companion   │ ──►  │  Agent  │
+  │          │         │     App      │      │         │
+  │ tap(text │  HTTP   │              │ HTTP │ "tapped │
+  │ ="Login")│  <5ms   │ "Login" →   │ <1ms │  at     │
+  │          │         │ (540, 820)  │      │(540,820)│
+  └─────────┘          │ dispatchGesture     └─────────┘
+                       │ at (540,820) │
+                       └──────────────┘
+                              │
+                              ▼  <50ms
+                       ┌──────────────┐
+                       │  Android OS  │
+                       │  processes   │
+                       │  the tap     │
+                       └──────────────┘
 
   Total end-to-end: ~60ms (vs ~1500ms with Appium)
 ```
@@ -125,66 +126,29 @@ Not all operations are equal. NeuralBridge intelligently routes commands through
   │  • get_ui_tree      │        │  • grant_permission  │
   │  • find_elements    │        │  • close_app (force) │
   │  • screenshot       │        │  • get_clipboard     │
-  │  • press_key        │        │  • set_wifi          │
+  │  • press_key        │        │                      │
   │  • global actions   │        │                      │
   │                     │        │  Requires ADB conn.  │
   │  95% of operations  │        │  5% of operations    │
   └─────────────────────┘        └─────────────────────┘
 ```
 
-### Wire Protocol
-
-Every message between the MCP Server and the Companion App uses a compact binary format:
-
-```
-  ┌─────────────────┬──────────────┬────────────────┬─────────────────────┐
-  │   Magic (2B)    │  Type (1B)   │  Length (4B)   │   Payload (N B)     │
-  │    0x4E42       │  0x01-0x03   │  big-endian    │   Protobuf          │
-  └─────────────────┴──────────────┴────────────────┴─────────────────────┘
-
-  Type values:
-    0x01 = Request    (Server → Device)    "tap at (540, 820)"
-    0x02 = Response   (Device → Server)    "tap completed in 2ms"
-    0x03 = Event      (Device → Server)    "UI changed — new screen detected"
-
-  Header: 7 bytes  │  Max payload: 16 MB  │  Port: 38472 (fixed)
-```
-
 ---
 
 ## Getting Started
 
-NeuralBridge is built from source. You'll clone the repo, build the Rust MCP server and the Android companion app, then connect them.
+NeuralBridge is built from source. You'll clone the repo, build the Android companion app, then connect your AI agent.
 
 ### Prerequisites
 
 | Requirement | Version | What it's for |
 |---|---|---|
-| **Rust toolchain** | stable | Building the MCP server |
 | **Android SDK** | API 24+ | ADB, build tools |
 | **Java JDK** | 17 | Building the companion app |
-| **protoc** | 3.x | Protobuf code generation |
 | **Android device or emulator** | Android 7.0+ | Running the companion app |
 
 <details>
 <summary><strong>Installing prerequisites</strong></summary>
-
-**Rust:**
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-**protoc (Protocol Buffers compiler):**
-```bash
-# Ubuntu/Debian
-sudo apt install -y protobuf-compiler
-
-# macOS
-brew install protobuf
-
-# Arch
-sudo pacman -S protobuf
-```
 
 **Android SDK + JDK:**
 Install [Android Studio](https://developer.android.com/studio) which includes the SDK and JDK, or install them separately:
@@ -206,27 +170,21 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 git clone https://github.com/dondetir/neuralBridge.git
 cd neuralbridge
 
-# Build the MCP server (Rust)
-cd mcp-server
-cargo build --release
-cd ..
-
-# Build the companion app (Android)
-cd companion-app
+# Build the Android app
+cd android
 ./gradlew assembleDebug
 cd ..
 ```
 
 After building, you'll have:
-- MCP server binary: `mcp-server/target/release/neuralbridge-mcp` (4.4 MB)
-- Companion APK: `companion-app/app/build/outputs/apk/debug/app-debug.apk` (7.5 MB)
+- APK: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ### Step 2: Install the Companion App
 
 Connect your Android device via USB (or start an emulator) and install:
 
 ```bash
-adb install -r companion-app/app/build/outputs/apk/debug/app-debug.apk
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 <details>
@@ -261,28 +219,26 @@ adb shell settings put secure accessibility_enabled 1
 
 ### Step 4: Connect
 
-```bash
-# Set up port forwarding (bridges device TCP port to your machine)
-adb forward tcp:38472 tcp:38472
+Connect over the network — the app shows its IP on the main screen. No port forwarding needed. Just make sure your machine and the Android device are reachable on the same network (WiFi or wired).
 
-# Start the MCP server (auto-discovers connected devices)
-./mcp-server/target/release/neuralbridge-mcp --auto-discover
-```
+The companion app starts the embedded MCP HTTP server automatically when the NeuralBridge toggle is enabled. No separate server process to run.
 
 ### Step 5: Configure Your AI Agent
 
-Add NeuralBridge to your AI agent's MCP configuration.
+Add NeuralBridge to your AI agent's MCP configuration. No authentication is required.
 
-**Claude Code** (`.claude/mcp.json`):
+**Claude Code** (CLI):
+```bash
+claude mcp add neuralbridge http://<device-ip>:7474/mcp --transport http
+```
+
+Or manually in `.claude/mcp.json`:
 ```json
 {
   "mcpServers": {
     "neuralbridge": {
-      "command": "/absolute/path/to/neuralbridge-mcp",
-      "args": ["--auto-discover"],
-      "env": {
-        "ANDROID_HOME": "/path/to/Android/Sdk"
-      }
+      "type": "http",
+      "url": "http://<device-ip>:7474/mcp"
     }
   }
 }
@@ -293,17 +249,14 @@ Add NeuralBridge to your AI agent's MCP configuration.
 {
   "mcpServers": {
     "neuralbridge": {
-      "command": "/absolute/path/to/neuralbridge-mcp",
-      "args": ["--auto-discover"],
-      "env": {
-        "ANDROID_HOME": "/path/to/Android/Sdk"
-      }
+      "type": "http",
+      "url": "http://<device-ip>:7474/mcp"
     }
   }
 }
 ```
 
-**Any MCP-compatible agent** — NeuralBridge uses stdio transport, the universal MCP standard. Point your agent's MCP client at the `neuralbridge-mcp` binary.
+**Any MCP-compatible agent** — NeuralBridge uses HTTP transport on port 7474. Point your agent's MCP client at `http://<device-ip>:7474/mcp`. No authentication headers are needed.
 
 ### Verify It Works
 
@@ -315,7 +268,7 @@ If you see a screenshot, everything is connected and working.
 
 ---
 
-## MCP Tools (43)
+## MCP Tools (32)
 
 Every tool is callable by your AI agent through MCP. Tools accept **selectors** (text, resource ID, content description) so your agent never needs to hardcode pixel coordinates.
 
@@ -327,10 +280,8 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 | `get_ui_tree` | Full UI hierarchy with element IDs, text, bounds | 18-33ms |
 | `find_elements` | Search for elements by text, ID, or content description | <10ms |
 | `get_screen_context` | Screenshot + simplified UI tree in one call | ~70ms |
-| `get_foreground_app` | Current app package name and activity | <5ms |
 | `get_device_info` | Manufacturer, model, Android version, screen size | <5ms |
 | `get_notifications` | Read notification titles, text, and actions | <10ms |
-| `get_clipboard` | Read clipboard content (via ADB on Android 10+) | ~200ms |
 | `get_recent_toasts` | Capture toast messages shown on screen | <5ms |
 
 ### Act — Touch, type, and interact
@@ -341,13 +292,10 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 | `long_press` | Long press (default 1000ms hold) | ~1000ms |
 | `double_tap` | Double tap gesture | ~150ms |
 | `swipe` | Swipe between two points with duration control | ~2ms |
-| `fling` | Fast fling in a direction (up/down/left/right) | ~2ms |
 | `pinch` | Pinch zoom (scale >1.0 = in, <1.0 = out) | ~300ms |
 | `drag` | Drag from point A to point B | ~500ms |
 | `input_text` | Type text into a field | ~1.4ms |
 | `press_key` | Press system keys (back, home, enter, etc.) | <5ms |
-| `pull_to_refresh` | Pull-to-refresh gesture | ~300ms |
-| `dismiss_keyboard` | Hide the on-screen keyboard | <10ms |
 | `set_clipboard` | Set clipboard content | <10ms |
 
 ### Manage — Control apps and device
@@ -360,10 +308,6 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 | `open_url` | Open URL in default browser | <100ms |
 | `global_action` | System actions: back, home, recents, notifications | <10ms |
 | `list_apps` | List installed apps (all or by filter) | ~200ms |
-| `install_app` | Install APK from path via ADB | ~2s |
-| `uninstall_app` | Uninstall app by package name via ADB | ~500ms |
-| `grant_permission` | Grant a runtime permission via ADB | ~200ms |
-| `revoke_permission` | Revoke a runtime permission via ADB | ~200ms |
 
 ### Wait — Synchronize with the UI
 
@@ -379,7 +323,6 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 | Tool | Description | Typical Latency |
 |---|---|---|
 | `screenshot_diff` | Compare screenshots for visual regression | ~100ms |
-| `capture_logcat` | Capture device logs (filter by package/level/crashes) | ~200ms |
 | `accessibility_audit` | Audit screen for a11y issues (touch targets, labels) | <50ms |
 | `enable_events` | Toggle real-time event streaming (UI changes, toasts) | <5ms |
 
@@ -450,11 +393,11 @@ All measurements taken on a Pixel-class device over ADB-forwarded TCP.
 
   NeuralBridge:
 
-    Agent → stdio → MCP Server → TCP → Companion App (in-process)
-                                                │
-    Agent ← stdio ← MCP Server ← TCP ◄─────────┘
+    Agent → HTTP → Companion App (in-process)
+                          │
+    Agent ← HTTP ◄────────┘
 
-    No process spawning. No IPC. No HTTP.
+    No process spawning. No intermediate server.
     AccessibilityService runs IN the same process as the Android UI framework.
     It's like the difference between a phone call and a note on your own desk.
 ```
@@ -488,13 +431,7 @@ When AI agents read UI trees, every token costs money and context window space. 
 
 A typical 200-node screen (50 interactive elements) goes from **~3,000 tokens to ~800 tokens** — a 73% reduction.
 
-All optimizations are enabled by default. Override with CLI flags if needed:
-```
---no-compact-tree      Disable compact tabular UI tree
---no-filter-elements   Return all elements, not just interactive
---no-compact-bounds    Use verbose bounds format
---no-consolidate       Expose all tools individually
-```
+All optimizations are enabled by default and configured within the companion app.
 
 ---
 
@@ -502,54 +439,27 @@ All optimizations are enabled by default. Override with CLI flags if needed:
 
 ```
 neuralbridge/
-│
-├── mcp-server/                     # Rust MCP server (runs on your machine)
-│   ├── src/
-│   │   ├── main.rs                 # Entry point, CLI args, device discovery
-│   │   ├── lib.rs                  # Library root, tool router
-│   │   ├── tools/                  # MCP tool implementations
-│   │   │   ├── observe.rs          #   screenshot, get_ui_tree, find_elements...
-│   │   │   ├── act.rs              #   tap, swipe, input_text, pinch...
-│   │   │   ├── manage.rs           #   launch_app, close_app, clear_data...
-│   │   │   └── wait.rs             #   wait_for_element, scroll_to_element...
-│   │   ├── protocol/               # Binary protocol layer
-│   │   │   ├── codec.rs            #   7-byte header encode/decode
-│   │   │   └── connection.rs       #   TCP connection + event channel
-│   │   ├── device/                 # Device management
-│   │   │   ├── adb.rs              #   ADB discovery + port forwarding
-│   │   │   ├── manager.rs          #   Multi-device state machine
-│   │   │   └── pool.rs             #   Connection pooling
-│   │   └── semantic/               # Intelligent element resolution
-│   │       ├── resolver.rs         #   6-strategy selector resolution
-│   │       └── selector.rs         #   Selector parsing and validation
-│   ├── proto/
-│   │   └── neuralbridge.proto      # Shared protobuf schema (source of truth)
-│   └── Cargo.toml
-│
-├── companion-app/                  # Android companion app (runs on device)
+├── android/                       # Android app (runs on device)
 │   ├── app/src/main/
 │   │   ├── kotlin/.../companion/
-│   │   │   ├── service/            # AccessibilityService + command handler
-│   │   │   ├── gesture/            # Gesture engine (dispatchGesture wrappers)
-│   │   │   ├── input/              # Text input, clipboard, key events
-│   │   │   ├── screenshot/         # MediaProjection + consent activity
-│   │   │   ├── network/            # TCP server + protobuf codec
-│   │   │   ├── uitree/             # UI tree walker + semantic extraction
-│   │   │   ├── notification/       # NotificationListenerService
-│   │   │   └── animation/          # Wave Bridge design system animations
-│   │   ├── cpp/
-│   │   │   └── jpeg_encoder.cpp    # JNI libjpeg-turbo (NEON-accelerated)
-│   │   └── res/                    # Wave Bridge theme resources
-│   ├── design/                     # Design system documentation
+│   │   │   ├── mcp/              # Embedded MCP HTTP server (Ktor CIO, port 7474)
+│   │   │   ├── service/          # AccessibilityService + command handler
+│   │   │   ├── gesture/          # Gesture engine
+│   │   │   ├── input/            # Text input, clipboard, key events
+│   │   │   ├── screenshot/       # MediaProjection + libjpeg-turbo (JNI)
+│   │   │   ├── network/          # TCP server + protobuf codec
+│   │   │   ├── uitree/           # UI tree walker + semantic extraction
+│   │   │   └── notification/     # NotificationListenerService
+│   │   ├── cpp/                   # JNI (libjpeg-turbo JPEG encoding)
+│   │   └── res/                   # Resources
+│   ├── proto/                     # Protobuf schema (source of truth)
 │   └── build.gradle.kts
-│
-├── python-demo/                    # Python MCP demo client (12 scenarios)
-├── docs/                           # Documentation
-├── scripts/                        # Setup helper scripts
-├── CONTRIBUTING.md                 # Contribution guidelines
-├── SECURITY.md                     # Security policy
-├── NOTICE                          # Attribution requirements (Apache 2.0)
-└── LICENSE                         # Apache 2.0 License
+├── examples/                      # Example MCP client
+│   └── mcp_client.py
+├── docs/                          # Documentation
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── LICENSE                        # Apache 2.0
 ```
 
 ---
@@ -564,14 +474,6 @@ neuralbridge/
 - **Multi-step workflows** — Form filling, navigation, app switching
 - **Accessibility testing** — Touch target audits, content description checks
 
-### Works with slower ADB path
-
-- App installation and uninstallation
-- Clearing app data
-- Granting/revoking permissions
-- Toggling WiFi, Bluetooth, Airplane mode
-- Clipboard access on Android 10+
-
 ### Does not work
 
 | Limitation | Reason |
@@ -582,26 +484,25 @@ neuralbridge/
 | CI/CD headless screenshots (Android 14+) | MediaProjection requires user consent |
 | Google Play distribution | AccessibilityService policy restrictions |
 
-See the [Companion App README](companion-app/README.md) for more details.
+See the [Android App README](android/README.md) for more details.
 
 ---
 
 ## Troubleshooting
 
 <details>
-<summary><strong>"Device not found" when starting MCP server</strong></summary>
+<summary><strong>Cannot connect to MCP server (HTTP)</strong></summary>
 
 ```bash
-# Check device is connected
-adb devices
+# 1. Check that both devices are reachable on the same network
+#    The app shows its IP on the main screen
 
-# If using wireless ADB (Android 11+)
-adb pair <device-ip>:5555
-adb connect <device-ip>:5555
+# 2. Verify the server is running (use the IP shown in the app)
+curl http://<device-ip>:7474/health
 
-# Verify port forwarding
-adb forward tcp:38472 tcp:38472
 ```
+
+Also check that the NeuralBridge toggle is enabled in the app — the MCP server only runs when the toggle is on.
 </details>
 
 <details>
@@ -651,54 +552,12 @@ The first screenshot after MediaProjection setup takes 150-300ms (warm-up). Subs
 
 ---
 
-## Environment Configuration
-
-Copy `.env.example` to `.env` and set your paths:
-
-```bash
-cp .env.example .env
-```
-
-```env
-# Android SDK location
-ANDROID_HOME=/path/to/Android/Sdk
-
-# ADB binary path (defaults to $ANDROID_HOME/platform-tools/adb)
-ADB_PATH=/path/to/Android/Sdk/platform-tools/adb
-```
-
-### MCP Server CLI Options
-
-```
-neuralbridge-mcp [OPTIONS]
-
-Options:
-  --auto-discover         Automatically find and connect to a device
-  --device <ID>           Connect to a specific device (e.g., emulator-5554)
-  --check                 Verify setup and connection, then exit
-  --enable-permissions    Auto-enable missing device permissions via ADB
-  --no-compact-tree       Disable compact UI tree format
-  --no-filter-elements    Return all UI elements, not just interactive ones
-  --no-compact-bounds     Use verbose bounds format
-  --no-consolidate        Expose all tools individually (disables merging)
-```
-
----
-
 ## Development
 
 ### Building from source
 
 ```bash
-# MCP Server (Rust)
-cd mcp-server
-cargo build --release         # Optimized build
-cargo test                    # Run all tests
-cargo clippy                  # Lint check
-cargo fmt --check             # Format check
-
-# Companion App (Android)
-cd companion-app
+cd android
 ./gradlew assembleDebug       # Build debug APK
 ./gradlew test                # Run unit tests
 ./gradlew connectedAndroidTest  # Run instrumented tests (requires device)
@@ -706,14 +565,10 @@ cd companion-app
 
 ### Updating the protobuf schema
 
-The schema at `mcp-server/proto/neuralbridge.proto` is the single source of truth. When you change it, regenerate code in both projects:
+The schema at `android/proto/neuralbridge.proto` is the source of truth. When you change it, regenerate Kotlin code:
 
 ```bash
-# Rust (automatic via build.rs)
-cd mcp-server && cargo build
-
-# Kotlin (copies proto and generates code)
-cd companion-app && ./gradlew generateProto
+cd android && ./gradlew generateProto
 ```
 
 ### Viewing companion app logs
@@ -737,8 +592,7 @@ adb logcat -s NeuralBridge:V
 
 | Document | Description |
 |---|---|
-| [MCP Server](mcp-server/README.md) | Server setup, tool reference, configuration |
-| [Companion App](companion-app/README.md) | Android app setup and permissions |
+| [Android App](android/README.md) | Android app setup and permissions |
 | [Contributing](CONTRIBUTING.md) | How to contribute, code style, PR process |
 | [Security](SECURITY.md) | Security policy and vulnerability reporting |
 | [Third-Party Licenses](THIRD-PARTY-LICENSES.md) | All dependency licenses |

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NeuralBridge</string>
+
+    <string name="service_description">AI-native Android automation platform. Enables AI agents to control your device through the MCP protocol with sub-100ms latency.\n\nThis service:\n• Observes UI elements across all apps\n• Performs gestures and touch interactions\n• Captures screenshots\n• Manages app lifecycle\n• Provides real-time UI state to connected AI agents\n\nDesigned for development, testing, and AI-assisted automation workflows.</string>
+
+    <string name="foreground_service_title">NeuralBridge Active</string>
+    <string name="foreground_service_message">MCP server active on port 7474</string>
+
+    <string name="setup_title">Setup Instructions</string>
+    <string name="setup_step_1">1. Enable AccessibilityService in Settings → Accessibility → NeuralBridge</string>
+    <string name="setup_step_2">2. Grant "Allow restricted settings" permission in Settings → Apps → NeuralBridge → Advanced</string>
+    <string name="setup_step_3">3. Enable Notification access in Settings → Notifications → Notification access → NeuralBridge</string>
+<string name="setup_step_5">5. Add MCP config to your AI agent</string>
+
+    <string name="status_service_running">Service running on port 7474</string>
+    <string name="status_service_stopped">Service not running</string>
+    <string name="status_no_connections">No active connections</string>
+    <string name="status_connected">Connected: %d client(s)</string>
+
+    <string name="action_open_settings">Open Accessibility Settings</string>
+    <string name="action_test_connection">Test Connection</string>
+</resources>

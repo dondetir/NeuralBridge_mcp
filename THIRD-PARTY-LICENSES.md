@@ -2,37 +2,7 @@
 
 NeuralBridge uses the following open source software:
 
-## Rust Dependencies (MCP Server)
-
-### Runtime Dependencies
-
-| Package | License | URL |
-|---------|---------|-----|
-| **rmcp** (0.15) | MIT | https://github.com/modelcontextprotocol/rust-sdk |
-| **schemars** (1.0) | MIT | https://github.com/GREsau/schemars |
-| **tokio** (1.35) | MIT | https://github.com/tokio-rs/tokio |
-| **prost** (0.12) | Apache-2.0 | https://github.com/tokio-rs/prost |
-| **prost-types** (0.12) | Apache-2.0 | https://github.com/tokio-rs/prost |
-| **bytes** (1.5) | MIT | https://github.com/tokio-rs/bytes |
-| **anyhow** (1.0) | MIT OR Apache-2.0 | https://github.com/dtolnay/anyhow |
-| **thiserror** (1.0) | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror |
-| **tracing** (0.1) | MIT | https://github.com/tokio-rs/tracing |
-| **tracing-subscriber** (0.3) | MIT | https://github.com/tokio-rs/tracing |
-| **serde** (1.0) | MIT OR Apache-2.0 | https://github.com/serde-rs/serde |
-| **serde_json** (1.0) | MIT OR Apache-2.0 | https://github.com/serde-rs/json |
-| **futures** (0.3) | MIT OR Apache-2.0 | https://github.com/rust-lang/futures-rs |
-| **async-trait** (0.1) | MIT OR Apache-2.0 | https://github.com/dtolnay/async-trait |
-| **uuid** (1.6) | MIT OR Apache-2.0 | https://github.com/uuid-rs/uuid |
-| **base64** (0.22) | MIT OR Apache-2.0 | https://github.com/marshallpierce/rust-base64 |
-| **image** (0.25) | MIT OR Apache-2.0 | https://github.com/image-rs/image |
-
-### Build Dependencies
-
-| Package | License | URL |
-|---------|---------|-----|
-| **prost-build** (0.12) | Apache-2.0 | https://github.com/tokio-rs/prost |
-
-## Android Dependencies (Companion App)
+## Android Dependencies
 
 ### Kotlin Core
 
@@ -61,6 +31,21 @@ NeuralBridge uses the following open source software:
 |---------|---------|-----|
 | **protobuf-kotlin** (3.24.0) | BSD-3-Clause | https://github.com/protocolbuffers/protobuf |
 | **protobuf-java** (3.24.0) | BSD-3-Clause | https://github.com/protocolbuffers/protobuf |
+
+### Ktor (Embedded MCP HTTP Server)
+
+| Package | License | URL |
+|---------|---------|-----|
+| **ktor-server-cio** (3.0.3) | Apache-2.0 | https://github.com/ktorio/ktor |
+| **ktor-server-core** (3.0.3) | Apache-2.0 | https://github.com/ktorio/ktor |
+| **ktor-server-content-negotiation** (3.0.3) | Apache-2.0 | https://github.com/ktorio/ktor |
+| **ktor-serialization-kotlinx-json** (3.0.3) | Apache-2.0 | https://github.com/ktorio/ktor |
+
+### Serialization
+
+| Package | License | URL |
+|---------|---------|-----|
+| **kotlinx-serialization-json** (1.7.3) | Apache-2.0 | https://github.com/Kotlin/kotlinx.serialization |
 
 ### Testing Libraries
 

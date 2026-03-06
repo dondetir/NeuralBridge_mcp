@@ -1,19 +1,9 @@
 # ==========================================
-# NeuralBridge - Multi-Language Repository
+# NeuralBridge
 # ==========================================
 
 # ------------------------------------------
-# Rust (mcp-server)
-# ------------------------------------------
-**/target/
-# Cargo.lock is intentionally tracked for binary crates (reproducible builds)
-# **/Cargo.lock  -- DO NOT ignore Cargo.lock
-**/src/protocol/generated/
-**/*.rs.bk
-**/*.pdb
-
-# ------------------------------------------
-# Android / Gradle (companion-app)
+# Android / Gradle
 # ------------------------------------------
 # Gradle
 **/.gradle/
@@ -77,48 +67,14 @@ keystore.properties
 *.pb.java
 *_pb2.py
 *_pb2.pyi
-**/companion-app/app/src/main/proto/
+**/android/app/src/main/proto/
 
 # ------------------------------------------
-# Python (python-demo)
+# Python (examples/)
 # ------------------------------------------
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-
-# Virtual environments
-venv/
-env/
-ENV/
 .venv/
-pythonenv*/
-
-# Distribution / packaging
-*.egg-info/
-dist/
-build/
-wheels/
-*.egg
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Test / coverage
-.pytest_cache/
-.coverage
-htmlcov/
-*.cover
-.hypothesis/
-
-# Type checking
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
 
 # ------------------------------------------
 # IDE / Editor Files
@@ -228,4 +184,3 @@ pnpm-lock.yaml
 # Environment files
 .env
 .env.*
-!.env.example

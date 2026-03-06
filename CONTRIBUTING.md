@@ -24,22 +24,11 @@ NeuralBridge enables AI agents to control Android devices with <100ms latency us
 
 ### Code Style
 
-**Rust (mcp-server):**
-- Follow standard Rust conventions (`cargo fmt`)
-- Run `cargo clippy` before committing
-- Add tests for new MCP tools
-- Document public APIs with doc comments
-
-**Kotlin (companion-app):**
+**Kotlin (android):**
 - Follow Android Kotlin style guide
 - Use coroutines for async operations
 - Keep AccessibilityService code efficient (<100ms target)
 - Add unit tests for business logic
-
-**Python (examples):**
-- PEP 8 style guide
-- Type hints for public functions
-- Clear docstrings for examples
 
 ### Commit Messages
 
@@ -56,8 +45,7 @@ Add android_pinch tool for zoom gestures
 ### Testing
 
 - All new features must include tests
-- Rust: `cargo test` in mcp-server/
-- Android: `./gradlew test` in companion-app/
+- Android: `./gradlew test` in android/
 - Integration: Test with real device/emulator
 
 ## 🔧 Areas for Contribution
@@ -88,7 +76,6 @@ Add android_pinch tool for zoom gestures
 **Include in your issue:**
 - NeuralBridge version
 - Android device/emulator details (API level, manufacturer)
-- Rust version (`rustc --version`)
 - Steps to reproduce
 - Logs (`adb logcat -s NeuralBridge:V`)
 
@@ -100,11 +87,8 @@ Add android_pinch tool for zoom gestures
 4. **Update documentation** (README, code comments)
 5. **Ensure all tests pass:**
    ```bash
-   # Rust tests
-   cd mcp-server && cargo test
-
    # Android tests
-   cd companion-app && ./gradlew test
+   cd android && ./gradlew test
    ```
 6. **Commit with clear messages**
 7. **Push to your fork:**
@@ -129,7 +113,7 @@ Before requesting review, verify:
 
 ## 📄 License
 
-By contributing to NeuralBridge, you agree that your contributions will be licensed under the MIT License.
+By contributing to NeuralBridge, you agree that your contributions will be licensed under the Apache 2.0 License.
 
 ## 🤝 Code of Conduct
 
@@ -141,8 +125,7 @@ By contributing to NeuralBridge, you agree that your contributions will be licen
 ## 💬 Getting Help
 
 - **Documentation:** See the [README](README.md) for setup and usage
-- **MCP Server:** See [mcp-server/README.md](mcp-server/README.md) for tool reference
-- **Companion App:** See [companion-app/README.md](companion-app/README.md) for Android setup
+- **Companion App:** See [android/README.md](android/README.md) for Android setup
 - **Questions:** Open a GitHub Discussion
 - **Bugs:** Open a GitHub Issue
 
