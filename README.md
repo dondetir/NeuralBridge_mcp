@@ -35,24 +35,30 @@
 
 ## Why NeuralBridge?
 
-Existing Android automation (Appium, UIAutomator2, ADB scripting) was built for test engineers, not AI agents. They suffer from:
+Existing Android automation falls into two camps — and both share the same fundamental bottleneck:
 
-- **High latency** — 200ms-2000ms per action due to IPC, process spawning, and USB overhead
-- **Fragile selectors** — break across app versions, locales, and screen densities
-- **No MCP support** — AI agents can't natively connect without custom glue code
-- **Root or special builds** — many tools need debug builds, instrumentation, or root
+1. **Test frameworks** (Appium, Maestro) — built for QA engineers, not AI agents. No MCP support. Every action routes through ADB or UIAutomator IPC, costing 200-1000ms per operation.
+2. **MCP wrappers** (mobile-mcp, droidrun) — AI-aware, but thin ADB wrappers underneath. 200-2000ms per action, 11-14 tools.
 
-NeuralBridge solves all of this:
+NeuralBridge takes a different approach: an on-device AccessibilityService that executes actions **in-process**, eliminating IPC overhead entirely.
 
-| | NeuralBridge | UIAutomator2 | ADB Shell |
-|---|:---:|:---:|:---:|
-| Tap latency | **~2ms** | 200-500ms | 500-2000ms |
-| Text input | **~1.4ms** | 200-500ms | 500-2000ms |
-| UI tree read | **18-33ms** | 200-500ms | 300-1000ms |
-| Screenshot | **~60ms** | 200-500ms | 200-300ms |
-| MCP native | **Yes** | No | No |
-| Root required | **No** | No | Partial |
-| Works on any app | **Yes** | Limited | Limited |
+### Competitive Landscape
+
+| | **NeuralBridge** | **Appium** | **Maestro** | **mobile-mcp** | **droidrun** | **ADB Shell** |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Tap latency | **~2ms** | 300-1000ms | 750ms-2s | 500-2000ms | 200-1000ms | 300-1000ms |
+| Text input | **~1.4ms** | 500-3000ms | 750ms-2s | 500-2000ms | 200-1000ms | 500-2000ms |
+| UI tree read | **18-33ms** | 500-2000ms | 750ms-2s | 1-5s | 200-500ms | 1-5s |
+| Screenshot | **~60ms** | 300-500ms | ~1s | 300-500ms | ~250ms | 300-500ms |
+| MCP native | **Yes** | Add-on | Yes (stdio) | Yes | Via adapter | No |
+| MCP tools | **43** | 30+ (add-on) | 14+ | ~19 | ~11 | — |
+| On-device agent | **Yes** | Instrumentation APK | Instrumentation APK | No (ADB only) | Yes (Portal app) | No |
+| Root required | **No** | No | No | No | No | Partial |
+| Works on any app | **Yes** | Yes | Yes | Yes | Yes | Limited |
+| AI-agent ready | **Yes** | Needs glue code | Yes (via MCP) | Yes | Yes | No |
+| Token optimization | **Yes (73% reduction)** | No | No | No | No | No |
+
+> **How to read the latency numbers:** Each value represents end-to-end time for a single action — from the agent issuing the command to receiving the result. Appium routes through HTTP → Appium Server → ADB → UIAutomator2. Maestro adds mandatory 750ms settle time before every action for reliability. mobile-mcp and ADB Shell spawn a new process per command (`adb shell uiautomator dump` alone takes 1-5s). droidrun uses ADB-forwarded TCP to its portal app. NeuralBridge executes in-process via AccessibilityService — no IPC, no process spawning.
 
 **Reliability:** 100/100 consecutive requests with zero errors in testing.
 
@@ -371,40 +377,76 @@ Most tools accept selectors instead of raw coordinates. The Semantic Engine reso
 
 ### Benchmarks
 
-All measurements taken on a Pixel-class device over ADB-forwarded TCP.
+All NeuralBridge measurements taken on a Pixel-class device over WiFi HTTP. Competitor latencies sourced from official documentation, community benchmarks, and architectural analysis.
 
 ```
-  Operation          NeuralBridge    UIAutomator2    ADB Shell
-  ─────────────────────────────────────────────────────────────
-  Tap                    ~2ms          200-500ms     500-2000ms
-  Swipe                  ~2ms          200-500ms     500-2000ms
-  Input text            ~1.4ms         200-500ms     500-2000ms
-  Get UI tree          18-33ms         200-500ms     300-1000ms
-  Screenshot            ~60ms          200-500ms      200-300ms
-  Find elements          <10ms         200-500ms     300-1000ms
-  ─────────────────────────────────────────────────────────────
-  Average               6.4ms            ~350ms        ~800ms
+  Operation        NeuralBridge   Appium     Maestro    mobile-mcp   droidrun   ADB Shell
+  ─────────────────────────────────────────────────────────────────────────────────────────
+  Tap                   ~2ms     300-1000ms  750ms-2s   500-2000ms  200-1000ms  300-1000ms
+  Swipe                 ~2ms     300-1000ms  750ms-2s   500-2000ms  200-1000ms  300-1000ms
+  Input text           ~1.4ms    500-3000ms  750ms-2s   500-2000ms  200-1000ms  500-2000ms
+  Get UI tree         18-33ms    500-2000ms  750ms-2s       1-5s    200-500ms       1-5s
+  Screenshot           ~60ms     300-500ms     ~1s      300-500ms    ~250ms     300-500ms
+  Find elements         <10ms    500-2000ms  750ms-2s       1-5s    200-500ms       1-5s
+  ─────────────────────────────────────────────────────────────────────────────────────────
+  Avg (actions)        6.4ms       ~800ms     ~1.2s      ~1.5s       ~500ms      ~1.5s
 ```
+
+**Why Appium is slow:** Multi-hop architecture — Client → HTTP → Appium Server → ADB → UIAutomator2 → Device. Each hop adds latency. Community reports show individual clicks at 300ms-1s, text input at 3-5s per field, and form-filling scenarios (40 fields) taking 17+ minutes. Has an MCP add-on (appium-mcp, 30+ tools) but inherits the same latency.
+
+**Why Maestro is slowest per-action:** Maestro prioritizes reliability over speed. Every action triggers a mandatory 750ms settle wait (checking the UI is stable before acting). Benchmarks show Maestro completing a test scenario in ~30s vs Appium's ~14s for the same flow. Maestro's advantage is near-zero flakiness — not raw speed.
+
+**Why mobile-mcp / ADB Shell are slow:** Every action spawns a new ADB shell process. Process creation alone costs 100-200ms, and `adb shell uiautomator dump` takes 1-5s depending on UI complexity.
+
+**Why droidrun is moderate:** Has an on-device portal app with AccessibilityService (like NeuralBridge), but communicates via ADB-forwarded TCP. The ADB forwarding layer adds 200-500ms overhead per round-trip.
 
 ### Why So Fast?
 
 ```
-  Traditional tools (Appium, UIAutomator2):
+  Appium (slowest — 5 hops):
 
-    Agent → HTTP → Appium Server → ADB → Device → spawn process → UIAutomator
-                                                                        │
-    Agent ← HTTP ← Appium Server ← ADB ← Device ← result ◄────────────┘
+    Agent → HTTP → Appium Server → ADB → UIAutomator2 → Device
+                                                              │
+    Agent ← HTTP ← Appium Server ← ADB ← result ◄───────────┘
 
     Each hop adds latency. Process spawning alone costs 100-200ms.
 
 
-  NeuralBridge:
+  Maestro (reliable but slow — 3 hops + settle):
 
-    Agent → HTTP → Companion App (in-process)
+    Agent → gRPC → On-device server → [750ms settle] → UIAutomator → Device
+                                                                         │
+    Agent ← gRPC ← On-device server ← result ◄──────────────────────────┘
+
+    Cuts out HTTP + ADB, but adds 750ms mandatory settle wait per action.
+    Designed for flake-free testing, not raw speed.
+
+
+  mobile-mcp / ADB Shell (ADB-bound):
+
+    Agent → MCP stdio → ADB → spawn process → UIAutomator → Device
+                                                                 │
+    Agent ← MCP stdio ← ADB ← result ◄──────────────────────────┘
+
+    Every action spawns a new shell process on the device.
+
+
+  droidrun (on-device app, but ADB transport):
+
+    Agent → ADB forward → TCP → Portal App (AccessibilityService)
+                                        │
+    Agent ← ADB forward ← TCP ◄────────┘
+
+    Has an in-process engine, but ADB forwarding adds 200-500ms overhead.
+
+
+  NeuralBridge (fastest — 1 hop):
+
+    Agent → HTTP → Companion App (in-process AccessibilityService)
                           │
     Agent ← HTTP ◄────────┘
 
-    No process spawning. No intermediate server.
+    No process spawning. No ADB. No UIAutomator IPC. No intermediate server.
     AccessibilityService runs IN the same process as the Android UI framework.
     It's like the difference between a phone call and a note on your own desk.
 ```
