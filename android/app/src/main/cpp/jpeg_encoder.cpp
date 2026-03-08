@@ -17,7 +17,7 @@
 #include <cstring>
 #include <vector>
 
-// TODO Week 5: Include libjpeg-turbo headers after library integration
+// TODO: Include libjpeg-turbo headers after library integration
 // #include <turbojpeg.h>
 
 #define LOG_TAG "NeuralBridge-JNI"
@@ -67,7 +67,7 @@ Java_com_neuralbridge_companion_screenshot_ScreenshotPipeline_encodeJpegNative(
         return nullptr;
     }
 
-    // TODO Week 5: Implement libjpeg-turbo encoding
+    // TODO: Implement libjpeg-turbo encoding
     // 1. Create tjhandle with tjInitCompress()
     // 2. Convert RGBA to RGB (remove alpha channel)
     // 3. Call tjCompress2() with:
@@ -148,7 +148,7 @@ Java_com_neuralbridge_companion_screenshot_ScreenshotPipeline_getNativeLibraryVe
     JNIEnv* env,
     jobject /* thiz */) {
 
-    // TODO Week 5: Return libjpeg-turbo version
+    // TODO: Return libjpeg-turbo version
     // return env->NewStringUTF(tjGetVersionString());
 
     return env->NewStringUTF("NeuralBridge JNI v0.1.0 (libjpeg-turbo not yet integrated)");

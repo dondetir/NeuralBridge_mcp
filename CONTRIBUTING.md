@@ -131,8 +131,8 @@ By contributing to NeuralBridge, you agree that your contributions will be licen
 
 ## 🙏 Attribution
 
-If you use NeuralBridge's ideas, architecture, or code, we'd appreciate (but don't require) a mention:
-- A link to https://github.com/dondetir/neuralBridge
+If you use NeuralBridge's ideas, architecture, or code, you must credit the repo:
+- A link to https://github.com/dondetir/NeuralBridge_mcp
 - A note like "Built with/inspired by NeuralBridge"
 
 ---

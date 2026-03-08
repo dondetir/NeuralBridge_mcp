@@ -17,10 +17,18 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0 License" /></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-0.4.0-success" alt="v0.4.0" /></a>
-  <a href="#mcp-tools-39"><img src="https://img.shields.io/badge/MCP%20Tools-39-brightgreen" alt="32 Tools" /></a>
+  <a href="#mcp-tools-32"><img src="https://img.shields.io/badge/MCP%20Tools-32-brightgreen" alt="32 Tools" /></a>
   <a href="#performance"><img src="https://img.shields.io/badge/Avg%20Latency-6.4ms-brightgreen" alt="6.4ms" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white" alt="Android 7+" /></a>
   <a href="#"><img src="https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" /></a>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/status-tab.png" alt="Status — MCP server connected" width="240" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/setup-tab.png" alt="Setup — permission status" width="240" />
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/logs-tab.png" alt="Logs — real-time tool calls" width="240" />
 </p>
 
 ---
@@ -121,14 +129,14 @@ Not all operations are equal. NeuralBridge intelligently routes commands through
   │   FAST PATH (<10ms) │        │  SLOW PATH (200ms+) │
   │   AccessibilityService       │  ADB Shell           │
   │                     │        │                      │
-  │  • tap, swipe, pinch│        │  • install_app       │
-  │  • input_text       │        │  • clear_app_data    │
-  │  • get_ui_tree      │        │  • grant_permission  │
-  │  • find_elements    │        │  • close_app (force) │
-  │  • screenshot       │        │  • get_clipboard     │
+  │  • tap, swipe, pinch│        │  • close_app (force) │
+  │  • input_text       │        │  • list_apps         │
+  │  • get_ui_tree      │        │  • set_clipboard     │
+  │  • find_elements    │        │                      │
+  │  • screenshot       │        │                      │
   │  • press_key        │        │                      │
-  │  • global actions   │        │                      │
-  │                     │        │  Requires ADB conn.  │
+  │  • global actions   │        │  Requires ADB conn.  │
+  │                     │        │                      │
   │  95% of operations  │        │  5% of operations    │
   └─────────────────────┘        └─────────────────────┘
 ```
@@ -167,8 +175,8 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 
 ```bash
 # Clone the repository
-git clone https://github.com/dondetir/neuralBridge.git
-cd neuralbridge
+git clone https://github.com/dondetir/NeuralBridge_mcp.git
+cd NeuralBridge_mcp
 
 # Build the Android app
 cd android
@@ -304,7 +312,6 @@ Every tool is callable by your AI agent through MCP. Tools accept **selectors** 
 |---|---|---|
 | `launch_app` | Launch app by package name | <100ms |
 | `close_app` | Close app (graceful or force-stop via ADB) | ~200ms |
-| `clear_app_data` | Wipe all app data (cache, databases, prefs) | ~200ms |
 | `open_url` | Open URL in default browser | <100ms |
 | `global_action` | System actions: back, home, recents, notifications | <10ms |
 | `list_apps` | List installed apps (all or by filter) | ~200ms |
@@ -612,9 +619,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines. High-priority areas:
 
 ## License
 
-[Apache 2.0](LICENSE) — Copyright 2026 NeuralBridge Contributors
+[Apache 2.0](LICENSE) — Copyright 2026 dondetir
 
 If you use or build upon NeuralBridge, you must include the [NOTICE](NOTICE) file
 in your distribution. We'd love a mention too:
 
-> "Powered by [NeuralBridge](https://github.com/dondetir/neuralBridge)"
+> "Powered by [NeuralBridge](https://github.com/dondetir/NeuralBridge_mcp)"

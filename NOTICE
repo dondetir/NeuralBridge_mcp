@@ -1,8 +1,8 @@
 NeuralBridge
-Copyright 2026 NeuralBridge Contributors
+Copyright 2026 dondetir
 
-This product is built and maintained by the NeuralBridge team.
-Source: https://github.com/dondetir/neuralBridge
+This product is built and maintained by dondetir.
+Source: https://github.com/dondetir/NeuralBridge_mcp
 
 ------------------------------------------------------------------------
 
@@ -19,10 +19,11 @@ If you use, redistribute, or build upon this software, you must:
   2. Retain all copyright, patent, trademark, and attribution notices
      from the original source code.
 
-We encourage (but do not require) visible acknowledgment in products,
-documentation, or promotional materials, such as:
+You must provide visible attribution to NeuralBridge with a link to the
+repository in any product, documentation, or promotional materials that
+use this software:
 
-    "Powered by NeuralBridge — https://github.com/dondetir/neuralBridge"
+    "Powered by NeuralBridge — https://github.com/dondetir/NeuralBridge_mcp"
 
 ------------------------------------------------------------------------
 

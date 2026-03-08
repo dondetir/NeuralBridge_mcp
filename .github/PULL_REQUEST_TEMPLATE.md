@@ -14,16 +14,14 @@ Brief description of what this PR does.
 
 ## Testing
 Describe how you tested this change:
-- [ ] `cargo test` passes (Rust)
-- [ ] `./gradlew test` passes (Android)
+- [ ] `./gradlew test` passes
 - [ ] Tested on real device / emulator (specify Android version)
 - [ ] New tool tested end-to-end via MCP
 
 ## Protobuf Changes
 If `.proto` files were modified:
-- [ ] Regenerated Rust code (`cargo build`)
 - [ ] Regenerated Kotlin code (`./gradlew generateProto`)
-- [ ] Both projects build successfully
+- [ ] Project builds successfully
 
 ## Checklist
 - [ ] Code follows existing patterns in the codebase

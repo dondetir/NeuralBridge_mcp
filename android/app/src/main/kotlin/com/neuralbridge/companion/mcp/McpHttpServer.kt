@@ -1,6 +1,7 @@
 package com.neuralbridge.companion.mcp
 
 import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import com.neuralbridge.companion.log.CommandLog
 import io.ktor.http.*
@@ -28,6 +29,7 @@ class McpHttpServer(
         private const val SERVER_NAME = "neuralbridge-android"
         private const val SERVER_VERSION = "0.4.0"
         private const val PROTOCOL_VERSION = "2024-11-05"
+        private const val SCREEN_WAKE_LOCK_TIMEOUT_MS = 5L * 60 * 1000 // 5 minutes
     }
 
     @Volatile
@@ -40,6 +42,10 @@ class McpHttpServer(
     // HTTP activity tracking for UI connection status
     private val lastRequestTimestamp = AtomicLong(0L)
 
+    // Screen wake lock: keeps screen on while MCP client is active
+    @Volatile
+    private var screenWakeLock: PowerManager.WakeLock? = null
+
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -48,6 +54,14 @@ class McpHttpServer(
     }
 
     suspend fun start() = withContext(Dispatchers.IO) {
+        releaseScreenWakeLock()
+        @Suppress("DEPRECATION")
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        screenWakeLock = pm.newWakeLock(
+            PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "NeuralBridge::McpClientScreen"
+        ).apply { setReferenceCounted(false) }
+
         val wifiIp = McpNetworkUtils.getWifiIpAddress(context)
         Log.i(TAG, "Starting MCP HTTP server on 0.0.0.0:$port (WiFi: $wifiIp)")
 
@@ -96,6 +110,7 @@ class McpHttpServer(
 
     private suspend fun handleMcpPost(call: ApplicationCall) {
         lastRequestTimestamp.set(System.currentTimeMillis())
+        screenWakeLock?.acquire(SCREEN_WAKE_LOCK_TIMEOUT_MS)
 
         // CORS
         call.response.headers.append("Access-Control-Allow-Origin", "*")
@@ -244,7 +259,16 @@ class McpHttpServer(
         server = null
         sessions.clear()
         lastRequestTimestamp.set(0L)
+        releaseScreenWakeLock()
         Log.i(TAG, "MCP HTTP server stopped")
+    }
+
+    fun releaseScreenWakeLock() {
+        if (screenWakeLock?.isHeld == true) {
+            screenWakeLock?.release()
+            Log.i(TAG, "Screen wake lock released")
+        }
+        screenWakeLock = null
     }
 
     fun getPort(): Int = port

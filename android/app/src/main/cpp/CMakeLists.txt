@@ -25,7 +25,7 @@ add_library(neuralbridge_jni SHARED
     jpeg_encoder.cpp
 )
 
-# TODO Week 5: Add libjpeg-turbo
+# TODO: Add libjpeg-turbo
 # Option 1: Prebuilt library
 # set(JPEG_TURBO_DIR ${CMAKE_SOURCE_DIR}/../../../../libjpeg-turbo)
 # add_library(jpeg-turbo SHARED IMPORTED)
@@ -55,7 +55,7 @@ target_link_libraries(neuralbridge_jni
     ${log-lib}
     ${jnigraphics-lib}
     ${android-lib}
-    # jpeg-turbo  # TODO Week 5: Uncomment after integration
+    # jpeg-turbo  # TODO: Uncomment after libjpeg-turbo integration
 )
 
 # Include directories

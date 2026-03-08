@@ -337,6 +337,9 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         Log.i(TAG, "Service shutting down")
 
+        // Release screen wake lock synchronously before scope cancellation
+        mcpHttpServer?.releaseScreenWakeLock()
+
         // Stop MCP HTTP server if it was started
         serviceScope.launch {
             mcpHttpServer?.stop()
@@ -446,6 +449,7 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
     fun disable() {
         @Suppress("DEPRECATION")
         stopForeground(true)
+        mcpHttpServer?.releaseScreenWakeLock()
         serviceScope.launch {
             mcpHttpServer?.stop()
             mcpHttpServer = null

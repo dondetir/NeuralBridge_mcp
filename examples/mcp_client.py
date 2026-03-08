@@ -3,8 +3,8 @@
 NeuralBridge MCP Test Client — Tests all 32 tools across 4 phases.
 
 Usage:
-    uv run --with mcp mcp_client.py 192.168.86.71
-    python mcp_client.py 192.168.86.71 --port 7474
+    uv run --with mcp mcp_client.py <DEVICE_IP>
+    python mcp_client.py <DEVICE_IP> --port 7474
 """
 
 import argparse
@@ -151,7 +151,7 @@ async def run(host: str, port: int):
 
 def main():
     parser = argparse.ArgumentParser(description="NeuralBridge MCP — full 32-tool test")
-    parser.add_argument("host", help="Device WiFi IP (e.g. 192.168.86.71)")
+    parser.add_argument("host", help="Device WiFi IP (e.g. 192.168.1.100)")
     parser.add_argument("--port", type=int, default=7474)
     args = parser.parse_args()
     asyncio.run(run(args.host, args.port))

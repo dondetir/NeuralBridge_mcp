@@ -81,7 +81,7 @@ class NotificationListener : NotificationListenerService() {
 
         Log.d(TAG, "Notification removed: ${sbn.packageName}")
 
-        // TODO Week 4: Push notification removal event if needed
+        // TODO: Push notification removal event if needed
     }
 
     /**
