@@ -49,9 +49,12 @@ class InputEngine(
             return false
         }
 
+        if (!element.isFocused) {
+            element.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+            element.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        }
         if (!element.isEditable) {
-            Log.w(TAG, "Element is not editable")
-            return false
+            Log.w(TAG, "Element is not marked editable, attempting input anyway")
         }
 
         Log.d(TAG, "Inputting text: ${text.length} chars, append=$append")
@@ -185,5 +188,140 @@ class InputEngine(
         val clip = ClipData.newPlainText("", text)
         clipboardManager.setPrimaryClip(clip)
         Log.d(TAG, "Clipboard set: ${text.length} chars")
+    }
+
+    /**
+     * Press a key by name.
+     *
+     * Uses accessibility actions only (shell "input keyevent" requires INJECT_EVENTS permission).
+     * Supported: enter, delete/backspace, select_all, cut, copy, paste, escape.
+     * For arbitrary text, use inputText() instead.
+     */
+    fun pressKey(keyName: String, focusedNode: AccessibilityNodeInfo?): Boolean {
+        Log.d(TAG, "Pressing key: $keyName")
+        val key = keyName.lowercase()
+
+        // Enter via ACTION_IME_ENTER (API 30+)
+        if (key == "enter" && focusedNode != null) {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                if (focusedNode.performAction(
+                        AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
+                    )) {
+                    Log.d(TAG, "Enter pressed via ACTION_IME_ENTER")
+                    return true
+                }
+            }
+            // Pre-API 30 fallback: inject newline character
+            val currentText = focusedNode.text?.toString() ?: ""
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "$currentText\n")
+            }
+            if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                Log.d(TAG, "Enter simulated via newline append")
+                return true
+            }
+        }
+
+        // Delete/Backspace via text truncation
+        if ((key == "delete" || key == "backspace") && focusedNode != null) {
+            val currentText = focusedNode.text?.toString() ?: ""
+            if (currentText.isNotEmpty()) {
+                val newText = currentText.dropLast(1)
+                val args = Bundle().apply {
+                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+                }
+                if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                    Log.d(TAG, "Delete performed via ACTION_SET_TEXT")
+                    return true
+                }
+            } else {
+                Log.d(TAG, "Nothing to delete, field is empty")
+                return true
+            }
+        }
+
+        // Clipboard actions on focused node
+        if (focusedNode != null) {
+            val clipAction = when (key) {
+                "select_all" -> {
+                    val text = focusedNode.text?.toString()
+                    if (text != null) {
+                        val args = Bundle().apply {
+                            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
+                            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, text.length)
+                        }
+                        focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
+                    } else false
+                }
+                "cut" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_CUT)
+                "copy" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_COPY)
+                "paste" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+                else -> null
+            }
+            if (clipAction != null) {
+                Log.d(TAG, "Clipboard action '$key': $clipAction")
+                return clipAction
+            }
+        }
+
+        // Escape -> GLOBAL_ACTION_BACK (closest equivalent)
+        if (key == "escape") {
+            val result = accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+            Log.d(TAG, "Escape via GLOBAL_ACTION_BACK: $result")
+            return result
+        }
+
+        // Tab -> move focus forward
+        if (key == "tab" && focusedNode != null) {
+            val args = Bundle().apply {
+                putInt(
+                    AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
+                    AccessibilityNodeInfo.MOVEMENT_GRANULARITY_LINE
+                )
+            }
+            // Try ACTION_NEXT_AT_MOVEMENT_GRANULARITY, then fall back to finding next focusable
+            if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)) {
+                val parent = focusedNode.parent
+                if (parent != null) {
+                    var foundCurrent = false
+                    for (i in 0 until parent.childCount) {
+                        val child = parent.getChild(i)
+                        if (child != null) {
+                            if (foundCurrent && child.isFocusable) {
+                                val result = child.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                                Log.d(TAG, "Tab: moved focus to next sibling: $result")
+                                @Suppress("DEPRECATION")
+                                child.recycle()
+                                @Suppress("DEPRECATION")
+                                parent.recycle()
+                                return result
+                            }
+                            if (child == focusedNode) foundCurrent = true
+                            @Suppress("DEPRECATION")
+                            child.recycle()
+                        }
+                    }
+                    @Suppress("DEPRECATION")
+                    parent.recycle()
+                }
+            }
+            Log.w(TAG, "Tab: could not find next focusable element")
+            return false
+        }
+
+        // Space -> type a space character into focused node
+        if (key == "space" && focusedNode != null) {
+            val currentText = focusedNode.text?.toString() ?: ""
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "$currentText ")
+            }
+            if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
+                Log.d(TAG, "Space inserted via ACTION_SET_TEXT")
+                return true
+            }
+        }
+
+        Log.w(TAG, "Key '$keyName' not supported via accessibility actions")
+        return false
     }
 }

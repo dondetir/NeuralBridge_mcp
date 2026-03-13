@@ -505,7 +505,14 @@ class McpToolHandler(
             resolveSelector(tree, elementText, resourceId, null)
                 ?: return errorResult("Element not found: resource_id=$resourceId, text=$elementText")
         } else {
-            tree.elements.firstOrNull { it.focusable && (it.className?.contains("EditText") == true) }
+            tree.elements.firstOrNull { e ->
+                e.focusable && (
+                    e.className?.contains("EditText") == true ||
+                    e.className?.contains("TextField") == true ||
+                    e.className == "android.widget.AutoCompleteTextView" ||
+                    e.className?.contains("SearchView") == true
+                )
+            }
                 ?: return errorResult("No editable element found. Specify resource_id or element_text")
         }
 
@@ -537,7 +544,9 @@ class McpToolHandler(
 
     private fun handlePressKey(args: JsonObject): McpToolCallResult {
         val key = args["key"]?.jsonPrimitive?.contentOrNull ?: return errorResult("key required")
-        val action = when (key.lowercase()) {
+
+        // Global actions first (don't need a focused node)
+        val globalAction = when (key.lowercase()) {
             "back" -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK
             "home" -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
             "recents" -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS
@@ -545,12 +554,20 @@ class McpToolHandler(
             "power" -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN
             else -> null
         }
-        return if (action != null) {
-            service.performGlobalAction(action)
-            textResult("{\"key\":\"$key\",\"latency_ms\":0}")
-        } else {
-            errorResult("Key '$key' not supported via AccessibilityService. Use 'back', 'home', 'recents', 'notifications', 'power'")
+        if (globalAction != null) {
+            service.performGlobalAction(globalAction)
+            return textResult("{\"key\":\"$key\",\"latency_ms\":0}")
         }
+
+        // For other keys, delegate to InputEngine
+        val focusedNode = service.rootInActiveWindow?.findFocus(
+            android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT
+        )
+        val success = inputEngine.pressKey(key, focusedNode)
+        @Suppress("DEPRECATION")
+        focusedNode?.recycle()
+        return if (success) textResult("{\"key\":\"$key\",\"latency_ms\":0}")
+        else errorResult("Key '$key' not supported or no focused input field. Supported: back, home, recents, notifications, power (global); enter, delete/backspace, tab, escape, space, select_all, cut, copy, paste (requires focused field).")
     }
 
     private fun handleGlobalAction(args: JsonObject): McpToolCallResult {

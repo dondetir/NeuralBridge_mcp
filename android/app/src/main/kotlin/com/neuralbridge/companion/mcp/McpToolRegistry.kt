@@ -219,11 +219,11 @@ object McpToolRegistry {
         ),
         McpToolDefinition(
             name = "android_press_key",
-            description = "Press key: back, home, recents, notifications, power.",
+            description = "Press a key. Global (always work): back, home, recents, notifications, power. Requires focused input field: enter, delete/backspace, tab, escape, space, select_all, cut, copy, paste.",
             inputSchema = buildJsonObject {
                 put("type", "object")
                 putJsonObject("properties") {
-                    putJsonObject("key") { put("type", "string"); put("description", "Key name (back, home, recents, notifications, power)") }
+                    putJsonObject("key") { put("type", "string"); put("description", "Key name: back, home, recents, notifications, power, enter, delete, backspace, tab, escape, space, select_all, cut, copy, paste") }
                 }
                 putJsonArray("required") { add(JsonPrimitive("key")) }
             }
