@@ -1,14 +1,12 @@
 package com.neuralbridge.companion.screenshot
 
 import android.accessibilityservice.AccessibilityService
-import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
 import android.media.projection.MediaProjection
-import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -68,6 +66,9 @@ class ScreenshotPipeline(
     // Listener notified when MediaProjection session dies
     var onMediaProjectionLost: (() -> Unit)? = null
 
+    // Listener notified when MediaProjection is granted (to upgrade foreground service type)
+    var onMediaProjectionGranted: (() -> Unit)? = null
+
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() {
             Log.w(TAG, "MediaProjection session stopped by system")
@@ -110,22 +111,19 @@ class ScreenshotPipeline(
      * re-launching ScreenshotConsentActivity when the service's polling loop already
      * stored the result but hasn't consumed it yet.
      *
-     * @return true if a pending result was consumed and MediaProjection was created
+     * @return true if a pending result was consumed and MediaProjection was registered
      */
     suspend fun tryConsumePendingConsent(): Boolean {
-        if (!ScreenshotConsentActivity.hasConsentResult()) return false
-        val result = ScreenshotConsentActivity.consumeConsentResult() ?: return false
-        val (resultCode, resultData) = result
-        if (resultCode != Activity.RESULT_OK || resultData == null) return false
+        val projection = ScreenshotConsentActivity.consumeMediaProjection() ?: return false
         return try {
-            val manager = accessibilityService.getSystemService(MediaProjectionManager::class.java)
-            val projection = manager.getMediaProjection(resultCode, resultData)
             registerCallback(projection)
             mediaProjection = projection
+            onMediaProjectionGranted?.invoke()
             Log.i(TAG, "MediaProjection permission granted from pending consent")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to create MediaProjection from pending consent: ${e.message}")
+            Log.w(TAG, "Failed to register MediaProjection from pending consent: ${e.message}")
+            projection.stop()
             false
         }
     }
@@ -139,8 +137,8 @@ class ScreenshotPipeline(
     suspend fun requestMediaProjectionPermission(): Boolean {
         return try {
             val projection = initializeMediaProjection()
-            registerCallback(projection)
             mediaProjection = projection
+            onMediaProjectionGranted?.invoke()
             Log.i(TAG, "MediaProjection permission granted")
             true
         } catch (e: Exception) {
@@ -374,6 +372,10 @@ class ScreenshotPipeline(
 
     /**
      * Initialize MediaProjection (requires user consent)
+     *
+     * Launches ScreenshotConsentActivity which creates the MediaProjection while
+     * still in the foreground (required on Android 15+). We then poll for the
+     * pre-created MediaProjection instance.
      */
     private suspend fun initializeMediaProjection(): MediaProjection = withContext(Dispatchers.Main) {
         suspendCancellableCoroutine { continuation ->
@@ -390,33 +392,21 @@ class ScreenshotPipeline(
 
                 while (attempts < maxAttempts) {
                     if (ScreenshotConsentActivity.hasConsentResult()) {
-                        val result = ScreenshotConsentActivity.consumeConsentResult()
+                        val projection = ScreenshotConsentActivity.consumeMediaProjection()
 
-                        if (result != null) {
-                            val (resultCode, resultData) = result
-
-                            if (resultCode == Activity.RESULT_OK && resultData != null) {
-                                try {
-                                    // Step 3: Create MediaProjection from consent result
-                                    val mediaProjectionManager = accessibilityService.getSystemService(
-                                        MediaProjectionManager::class.java
-                                    )
-                                    val projection = mediaProjectionManager.getMediaProjection(resultCode, resultData)
-
-                                    Log.i(TAG, "MediaProjection initialized successfully")
-                                    continuation.resume(projection)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Failed to create MediaProjection", e)
-                                    continuation.resumeWithException(e)
-                                }
-                            } else {
-                                val error = Exception("MediaProjection consent denied by user")
-                                Log.w(TAG, error.message.orEmpty())
-                                continuation.resumeWithException(error)
+                        if (projection != null) {
+                            try {
+                                registerCallback(projection)
+                                Log.i(TAG, "MediaProjection initialized successfully")
+                                continuation.resume(projection)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to register MediaProjection callback", e)
+                                projection.stop()
+                                continuation.resumeWithException(e)
                             }
                         } else {
-                            val error = Exception("MediaProjection consent result is null")
-                            Log.e(TAG, error.message.orEmpty())
+                            val error = Exception("MediaProjection consent denied by user")
+                            Log.w(TAG, error.message.orEmpty())
                             continuation.resumeWithException(error)
                         }
 

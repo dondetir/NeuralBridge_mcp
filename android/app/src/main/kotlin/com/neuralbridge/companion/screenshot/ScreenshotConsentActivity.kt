@@ -3,9 +3,12 @@ package com.neuralbridge.companion.screenshot
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import com.neuralbridge.companion.service.NeuralBridgeAccessibilityService
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -15,15 +18,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * This Activity is launched when MediaProjection needs user permission,
  * displays the system consent dialog, and stores the result for ScreenshotPipeline.
  *
- * Usage:
- * 1. ScreenshotPipeline calls startActivityForResult() with consent intent
- * 2. System shows "Start capturing everything on your screen?" dialog
- * 3. User taps "Start now"
- * 4. This Activity receives result and stores it in MediaProjectionManager
- * 5. ScreenshotPipeline creates MediaProjection from stored result
- *
- * Note: On Android 14+, consent is single-use and must be re-requested
- * after app restart or device reboot.
+ * On Android 14+, getMediaProjection() requires a foreground service with
+ * MEDIA_PROJECTION type, so we upgrade the service type before creating
+ * the projection. If the upgrade fails (OEM restriction), we fall back
+ * gracefully and rely on AccessibilityService.takeScreenshot() instead.
  */
 class ScreenshotConsentActivity : Activity() {
 
@@ -36,29 +34,24 @@ class ScreenshotConsentActivity : Activity() {
 
         // Shared result storage (since we can't directly pass result between components)
         @Volatile
-        private var pendingResultCode: Int? = null
-
-        @Volatile
-        private var pendingResultData: Intent? = null
+        private var pendingMediaProjection: MediaProjection? = null
 
         /**
          * Check if consent result is available
          */
         fun hasConsentResult(): Boolean {
-            return pendingResultCode != null
+            return pendingMediaProjection != null
         }
 
         /**
          * Get consent result and clear it (thread-safe — only one caller wins).
-         * @return Pair of (resultCode, resultData) or null if not available
+         * @return MediaProjection or null if not available
          */
         @Synchronized
-        fun consumeConsentResult(): Pair<Int, Intent?>? {
-            val code = pendingResultCode ?: return null
-            val data = pendingResultData
-            pendingResultCode = null
-            pendingResultData = null
-            return Pair(code, data)
+        fun consumeMediaProjection(): MediaProjection? {
+            val projection = pendingMediaProjection
+            pendingMediaProjection = null
+            return projection
         }
 
         /**
@@ -90,6 +83,7 @@ class ScreenshotConsentActivity : Activity() {
         val mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         val intent = mediaProjectionManager.createScreenCaptureIntent()
 
+        @Suppress("DEPRECATION")
         startActivityForResult(intent, REQUEST_MEDIA_PROJECTION)
     }
 
@@ -100,17 +94,9 @@ class ScreenshotConsentActivity : Activity() {
             Log.d(TAG, "MediaProjection consent result: resultCode=$resultCode")
 
             if (resultCode == RESULT_OK && data != null) {
-                // Store result for ScreenshotPipeline to consume
-                pendingResultCode = resultCode
-                pendingResultData = data
-
-                Log.i(TAG, "MediaProjection consent granted")
+                tryCreateMediaProjection(resultCode, data)
             } else {
                 Log.w(TAG, "MediaProjection consent denied or cancelled")
-
-                // Store failure result
-                pendingResultCode = resultCode
-                pendingResultData = null
             }
         }
 
@@ -119,6 +105,38 @@ class ScreenshotConsentActivity : Activity() {
 
         // Close this Activity
         finish()
+    }
+
+    /**
+     * Try to create MediaProjection after user grants consent.
+     * On Android 14+, the foreground service must have MEDIA_PROJECTION type
+     * BEFORE calling getMediaProjection(), so we upgrade it first.
+     * The service-side callback also upgrades (with an AtomicBoolean guard
+     * preventing double execution), but the Activity-side call must happen
+     * first because getMediaProjection() checks the FGS type immediately.
+     * If the upgrade fails (OEM restriction), AccessibilityService.takeScreenshot()
+     * is used as fallback.
+     */
+    private fun tryCreateMediaProjection(resultCode: Int, data: Intent) {
+        val service = NeuralBridgeAccessibilityService.instance
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && service != null) {
+            service.upgradeForegroundServiceForMediaProjection()
+        }
+
+        try {
+            val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val projection = manager.getMediaProjection(resultCode, data)
+            if (projection != null) {
+                pendingMediaProjection = projection
+                Log.i(TAG, "MediaProjection created and stored")
+            } else {
+                Log.e(TAG, "getMediaProjection returned null")
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "MediaProjection not available (${e.message}), will use AccessibilityService.takeScreenshot() fallback")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create MediaProjection: ${e.message}", e)
+        }
     }
 
     override fun onDestroy() {
