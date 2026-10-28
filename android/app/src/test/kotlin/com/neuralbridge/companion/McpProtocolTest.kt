@@ -76,9 +76,12 @@ class McpToolRegistryTest {
     }
 
     @Test
-    fun testAllToolsHaveAndroidPrefix() {
+    fun testAllToolsHaveKnownPrefix() {
         McpToolRegistry.getAllTools().forEach { tool ->
-            assertTrue("${tool.name} must start with android_", tool.name.startsWith("android_"))
+            // The toolset is android_* + web_* (WebView/CDP driver). Not every tool
+            // is android_ prefixed by design.
+            val ok = tool.name.startsWith("android_") || tool.name.startsWith("web_")
+            assertTrue("${tool.name} must start with android_ or web_", ok)
         }
     }
 

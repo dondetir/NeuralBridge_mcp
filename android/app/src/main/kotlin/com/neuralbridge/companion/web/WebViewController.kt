@@ -55,6 +55,112 @@ class WebViewController(private val context: Context) {
         private const val TAG = "WebViewController"
         private const val DEFAULT_LOAD_TIMEOUT_MS = 30_000L
         private const val DEFAULT_USER_AGENT_SUFFIX = " NeuralBridgeWebView"
+
+        // ------------------------------------------------------------------
+        // Pure JS/DOM string helpers.
+        //
+        // These are the machinery behind web_eval_js / web_query / web_get_text /
+        // web_wait_for: embedding user-supplied CSS selectors into JS and decoding
+        // the JSON-encoded values the WebView returns. They are stateless and kept
+        // in the companion (no Context) so the JVM unit suite can pin them down.
+        //
+        // The exact failure modes they guard against are the ones that LOOK like
+        // "web_query found nothing": a selector containing quotes/backslashes that
+        // yields malformed JS, or a decode step that corrupts a result. A selector
+        // that matches no elements returning `[]`/null is *correct* behaviour, not
+        // a bug -- see WebJavascriptBridgeTest.
+        // ------------------------------------------------------------------
+
+        /** Build the JS executed by web_query for the given CSS [selector]. Pure for testability. */
+        internal fun buildQueryScript(selector: String, all: Boolean): String {
+            val nodesExpr = if (all) {
+                "Array.from(document.querySelectorAll(sel))"
+            } else {
+                "(function(){var e=document.querySelector(sel);return e?[e]:[];})()"
+            }
+            return """
+                (function(){
+                  try {
+                    var sel = ${jsString(selector)};
+                    var nodes = $nodesExpr;
+                    return JSON.stringify(nodes.map(function(e){
+                      var r = e.getBoundingClientRect();
+                      return {
+                        tag: e.tagName ? e.tagName.toLowerCase() : null,
+                        id: e.id || null,
+                        text: (e.innerText || e.textContent || '').trim().slice(0, 200),
+                        name: e.getAttribute ? e.getAttribute('name') : null,
+                        type: e.getAttribute ? e.getAttribute('type') : null,
+                        href: e.getAttribute ? e.getAttribute('href') : null,
+                        rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
+                        visible: !!(r.width && r.height)
+                      };
+                    }));
+                  } catch (err) { return JSON.stringify({error: String(err)}); }
+                })()
+            """.trimIndent()
+        }
+
+        /** Safely embed an arbitrary string as a JS string literal. */
+        internal fun jsString(s: String): String {
+            val sb = StringBuilder("\"")
+            for (c in s) {
+                when (c) {
+                    '\\' -> sb.append("\\\\")
+                    '"' -> sb.append("\\\"")
+                    '\n' -> sb.append("\\n")
+                    '\r' -> sb.append("\\r")
+                    '\t' -> sb.append("\\t")
+                    '\u2028' -> sb.append("\\u2028")
+                    '\u2029' -> sb.append("\\u2029")
+                    else -> sb.append(c)
+                }
+            }
+            sb.append("\"")
+            return sb.toString()
+        }
+
+        /**
+         * Decode the JSON string the WebView returns from evaluateJavascript.
+         * Returns null for the literal "null". Non-string JSON (numbers, objects) is
+         * returned verbatim so callers can still inspect it.
+         */
+        internal fun decodeJsString(raw: String): String? {
+            if (raw == "null") return null
+            if (raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
+                val inner = raw.substring(1, raw.length - 1)
+                val sb = StringBuilder(inner.length)
+                var i = 0
+                while (i < inner.length) {
+                    val c = inner[i]
+                    if (c == '\\' && i + 1 < inner.length) {
+                        val n = inner[i + 1]
+                        when (n) {
+                            'n' -> { sb.append('\n'); i += 2 }
+                            'r' -> { sb.append('\r'); i += 2 }
+                            't' -> { sb.append('\t'); i += 2 }
+                            '"' -> { sb.append('"'); i += 2 }
+                            '\\' -> { sb.append('\\'); i += 2 }
+                            '/' -> { sb.append('/'); i += 2 }
+                            'u' -> {
+                                if (i + 5 < inner.length + 1 && i + 6 <= inner.length) {
+                                    val hex = inner.substring(i + 2, i + 6)
+                                    val code = hex.toIntOrNull(16)
+                                    if (code != null) { sb.append(code.toChar()); i += 6 }
+                                    else { sb.append(c); i += 1 }
+                                } else { sb.append(c); i += 1 }
+                            }
+                            else -> { sb.append(n); i += 2 }
+                        }
+                    } else {
+                        sb.append(c); i += 1
+                    }
+                }
+                return sb.toString()
+            }
+            // Not a quoted string (number/boolean/object) — return as-is.
+            return raw
+        }
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -292,27 +398,7 @@ class WebViewController(private val context: Context) {
      * otherwise all matches. Each entry has tag, text, and bounding-rect fields.
      */
     suspend fun query(selector: String, all: Boolean): String {
-        val script = """
-            (function(){
-              try {
-                var sel = ${jsString(selector)};
-                var nodes = ${if (all) "Array.from(document.querySelectorAll(sel))" else "(function(){var e=document.querySelector(sel);return e?[e]:[];})()"};
-                return JSON.stringify(nodes.map(function(e){
-                  var r = e.getBoundingClientRect();
-                  return {
-                    tag: e.tagName ? e.tagName.toLowerCase() : null,
-                    id: e.id || null,
-                    text: (e.innerText || e.textContent || '').trim().slice(0, 200),
-                    name: e.getAttribute ? e.getAttribute('name') : null,
-                    type: e.getAttribute ? e.getAttribute('type') : null,
-                    href: e.getAttribute ? e.getAttribute('href') : null,
-                    rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
-                    visible: !!(r.width && r.height)
-                  };
-                }));
-              } catch (err) { return JSON.stringify({error: String(err)}); }
-            })()
-        """.trimIndent()
+        val script = buildQueryScript(selector, all)
         return evalString(script) ?: "[]"
     }
 
@@ -393,68 +479,4 @@ class WebViewController(private val context: Context) {
         out.toByteArray()
     }
 
-    // ------------------------------------------------------------------
-    // JS string helpers
-    // ------------------------------------------------------------------
-
-    /** Safely embed an arbitrary Kotlin string as a JS string literal. */
-    private fun jsString(s: String): String {
-        val sb = StringBuilder("\"")
-        for (c in s) {
-            when (c) {
-                '\\' -> sb.append("\\\\")
-                '"' -> sb.append("\\\"")
-                '\n' -> sb.append("\\n")
-                '\r' -> sb.append("\\r")
-                '\t' -> sb.append("\\t")
-                '\u2028' -> sb.append("\\u2028")
-                '\u2029' -> sb.append("\\u2029")
-                else -> sb.append(c)
-            }
-        }
-        sb.append("\"")
-        return sb.toString()
-    }
-
-    /**
-     * Decode the JSON string the WebView returns from evaluateJavascript.
-     * Returns null for the literal "null". Non-string JSON (numbers, objects) is
-     * returned verbatim so callers can still inspect it.
-     */
-    private fun decodeJsString(raw: String): String? {
-        if (raw == "null") return null
-        if (raw.length >= 2 && raw.startsWith("\"") && raw.endsWith("\"")) {
-            val inner = raw.substring(1, raw.length - 1)
-            val sb = StringBuilder(inner.length)
-            var i = 0
-            while (i < inner.length) {
-                val c = inner[i]
-                if (c == '\\' && i + 1 < inner.length) {
-                    val n = inner[i + 1]
-                    when (n) {
-                        'n' -> { sb.append('\n'); i += 2 }
-                        'r' -> { sb.append('\r'); i += 2 }
-                        't' -> { sb.append('\t'); i += 2 }
-                        '"' -> { sb.append('"'); i += 2 }
-                        '\\' -> { sb.append('\\'); i += 2 }
-                        '/' -> { sb.append('/'); i += 2 }
-                        'u' -> {
-                            if (i + 5 < inner.length + 1 && i + 6 <= inner.length) {
-                                val hex = inner.substring(i + 2, i + 6)
-                                val code = hex.toIntOrNull(16)
-                                if (code != null) { sb.append(code.toChar()); i += 6 }
-                                else { sb.append(c); i += 1 }
-                            } else { sb.append(c); i += 1 }
-                        }
-                        else -> { sb.append(n); i += 2 }
-                    }
-                } else {
-                    sb.append(c); i += 1
-                }
-            }
-            return sb.toString()
-        }
-        // Not a quoted string (number/boolean/object) — return as-is.
-        return raw
-    }
 }

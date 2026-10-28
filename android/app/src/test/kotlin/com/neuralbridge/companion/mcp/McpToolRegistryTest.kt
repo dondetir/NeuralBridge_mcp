@@ -14,12 +14,11 @@ class McpToolRegistryTest {
     }
 
     @Test
-    fun `all tool names have android_ prefix`() {
+    fun `all tool names have a known namespace prefix`() {
         tools.forEach { tool ->
-            assertTrue(
-                "Tool '${tool.name}' missing android_ prefix",
-                tool.name.startsWith("android_")
-            )
+            // Toolset is android_* (device) + web_* (in-app WebView driver).
+            val ok = tool.name.startsWith("android_") || tool.name.startsWith("web_")
+            assertTrue("Tool '${tool.name}' missing known prefix (android_ or web_)", ok)
         }
     }
 
