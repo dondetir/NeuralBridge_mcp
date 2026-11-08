@@ -354,7 +354,17 @@ class MainActivity : Activity() {
                     data = Uri.parse("package:$packageName")
                 })
             } catch (e: Exception) {
-                Log.w("MainActivity", "Battery optimization settings not available", e)
+                try {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        })
+                    } catch (err: Exception) {
+                        Log.w("MainActivity", "Battery optimization settings not available", err)
+                    }
+                }
             }
         }
         addPermissionCard("MediaProjection", "Enable fast screenshot capture (60ms)") {
