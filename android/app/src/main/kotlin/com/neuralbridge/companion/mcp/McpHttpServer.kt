@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicLong
 class McpHttpServer(
     private val context: Context,
     private val toolHandler: McpToolHandler,
-    private val port: Int = MCP_PORT
+    private val port: Int = MCP_PORT,
+    private val bindHost: String = "0.0.0.0"
 ) {
     companion object {
         const val MCP_PORT = 7474
@@ -63,9 +64,9 @@ class McpHttpServer(
         ).apply { setReferenceCounted(false) }
 
         val wifiIp = McpNetworkUtils.getWifiIpAddress(context)
-        Log.i(TAG, "Starting MCP HTTP server on 0.0.0.0:$port (WiFi: $wifiIp)")
+        Log.i(TAG, "Starting MCP HTTP server on $bindHost:$port (WiFi: $wifiIp)")
 
-        server = embeddedServer(CIO, port = port, host = "0.0.0.0") {
+        server = embeddedServer(CIO, port = port, host = bindHost) {
             routing {
                 get("/") {
                     call.respondText("NeuralBridge MCP Server v$SERVER_VERSION — POST /mcp")
@@ -272,6 +273,7 @@ class McpHttpServer(
     }
 
     fun getPort(): Int = port
+    fun getBindHost(): String = bindHost
     fun isRunning(): Boolean = server != null
     fun getActiveConnectionCount(): Int = sessions.size
     fun getLastRequestTimestamp(): Long = lastRequestTimestamp.get()

@@ -113,11 +113,14 @@ class ScreenshotPipeline(
      * @return true if a pending result was consumed and MediaProjection was created
      */
     suspend fun tryConsumePendingConsent(): Boolean {
+        if (mediaProjection != null) return true
         if (!ScreenshotConsentActivity.hasConsentResult()) return false
         val result = ScreenshotConsentActivity.consumeConsentResult() ?: return false
         val (resultCode, resultData) = result
         if (resultCode != Activity.RESULT_OK || resultData == null) return false
         return try {
+            // Android 14+: FGS must include MEDIA_PROJECTION type before getMediaProjection()
+            promoteFgsForProjection()
             val manager = accessibilityService.getSystemService(MediaProjectionManager::class.java)
             val projection = manager.getMediaProjection(resultCode, resultData)
             registerCallback(projection)
@@ -137,6 +140,15 @@ class ScreenshotPipeline(
      * @return true if permission was granted, false if denied
      */
     suspend fun requestMediaProjectionPermission(): Boolean {
+        // Already granted (e.g. the UI onResume path consumed consent first) — no-op.
+        if (mediaProjection != null) {
+            Log.i(TAG, "MediaProjection already granted — skipping consent request")
+            return true
+        }
+        // A consent result may already be waiting (user granted before this ran).
+        if (ScreenshotConsentActivity.hasConsentResult()) {
+            if (tryConsumePendingConsent()) return true
+        }
         return try {
             val projection = initializeMediaProjection()
             registerCallback(projection)
@@ -144,8 +156,15 @@ class ScreenshotPipeline(
             Log.i(TAG, "MediaProjection permission granted")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "MediaProjection permission denied: ${e.message}")
-            false
+            // The consent activity's result may have been consumed by a concurrent
+            // path (UI onResume) that already built the projection — treat that as success.
+            if (mediaProjection != null) {
+                Log.i(TAG, "MediaProjection became available during consent race — treating as granted")
+                true
+            } else {
+                Log.w(TAG, "MediaProjection permission denied: ${e.message}")
+                false
+            }
         }
     }
 
@@ -155,6 +174,25 @@ class ScreenshotPipeline(
      */
     private fun registerCallback(projection: MediaProjection) {
         projection.registerCallback(projectionCallback, Handler(Looper.getMainLooper()))
+    }
+
+    /**
+     * Android 14+ requires an active foreground service of type `mediaProjection`
+     * BEFORE MediaProjectionManager.getMediaProjection() is called. Promote the
+     * AccessibilityService's FGS to include that type, synchronously on the main thread.
+     */
+    private fun promoteFgsForProjection() {
+        val svc = accessibilityService as? com.neuralbridge.companion.service.NeuralBridgeAccessibilityService
+            ?: return
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            svc.promoteForegroundForMediaProjection()
+        } else {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            Handler(Looper.getMainLooper()).post {
+                try { svc.promoteForegroundForMediaProjection() } finally { latch.countDown() }
+            }
+            latch.await(2, java.util.concurrent.TimeUnit.SECONDS)
+        }
     }
 
     /**
@@ -389,37 +427,49 @@ class ScreenshotPipeline(
                 val maxAttempts = 100 // 10 seconds timeout (100 * 100ms)
 
                 while (attempts < maxAttempts) {
+                    // Race guard: the UI onResume path (tryConsumePendingConsent) may have
+                    // consumed the result and built the projection already. Detect that and
+                    // resolve successfully instead of waiting for a result that is now gone.
+                    val existing = mediaProjection
+                    if (existing != null) {
+                        Log.i(TAG, "MediaProjection already built by concurrent path — resolving")
+                        continuation.resume(existing)
+                        return@launch
+                    }
+
                     if (ScreenshotConsentActivity.hasConsentResult()) {
                         val result = ScreenshotConsentActivity.consumeConsentResult()
 
-                        if (result != null) {
-                            val (resultCode, resultData) = result
-
-                            if (resultCode == Activity.RESULT_OK && resultData != null) {
-                                try {
-                                    // Step 3: Create MediaProjection from consent result
-                                    val mediaProjectionManager = accessibilityService.getSystemService(
-                                        MediaProjectionManager::class.java
-                                    )
-                                    val projection = mediaProjectionManager.getMediaProjection(resultCode, resultData)
-
-                                    Log.i(TAG, "MediaProjection initialized successfully")
-                                    continuation.resume(projection)
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Failed to create MediaProjection", e)
-                                    continuation.resumeWithException(e)
-                                }
-                            } else {
-                                val error = Exception("MediaProjection consent denied by user")
-                                Log.w(TAG, error.message.orEmpty())
-                                continuation.resumeWithException(error)
-                            }
-                        } else {
-                            val error = Exception("MediaProjection consent result is null")
-                            Log.e(TAG, error.message.orEmpty())
-                            continuation.resumeWithException(error)
+                        if (result == null) {
+                            // Result vanished between hasConsentResult() and consume() — another
+                            // path (UI onResume) took it. Loop: the mediaProjection != null guard
+                            // at the top will resolve us once that path finishes building it.
+                            Log.d(TAG, "Consent result consumed by concurrent path; continuing to poll")
+                            kotlinx.coroutines.delay(100)
+                            attempts++
+                            continue
                         }
 
+                        val (resultCode, resultData) = result
+                        if (resultCode == Activity.RESULT_OK && resultData != null) {
+                            try {
+                                // Android 14+: FGS must include MEDIA_PROJECTION type first
+                                promoteFgsForProjection()
+                                val mediaProjectionManager = accessibilityService.getSystemService(
+                                    MediaProjectionManager::class.java
+                                )
+                                val projection = mediaProjectionManager.getMediaProjection(resultCode, resultData)
+                                Log.i(TAG, "MediaProjection initialized successfully")
+                                continuation.resume(projection)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to create MediaProjection", e)
+                                continuation.resumeWithException(e)
+                            }
+                        } else {
+                            val error = Exception("MediaProjection consent denied by user")
+                            Log.w(TAG, error.message.orEmpty())
+                            continuation.resumeWithException(error)
+                        }
                         return@launch
                     }
 

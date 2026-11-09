@@ -19,6 +19,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.Spinner
@@ -29,10 +30,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.neuralbridge.companion.adapter.LogAdapter
 import com.neuralbridge.companion.log.CommandLog
-import com.neuralbridge.companion.mcp.McpHttpServer
 import com.neuralbridge.companion.mcp.McpNetworkUtils
+import com.neuralbridge.companion.mcp.ServerConfig
 import com.neuralbridge.companion.service.NeuralBridgeAccessibilityService
 
 class MainActivity : Activity() {
@@ -80,12 +80,14 @@ class MainActivity : Activity() {
     private lateinit var permissionProgressBar: ProgressBar
     private lateinit var permissionCardsContainer: LinearLayout
 
-    // Logs tab views
-    private lateinit var logRecyclerView: RecyclerView
+    // Logs tab views (live streaming log output)
+    private lateinit var logScrollView: android.widget.ScrollView
+    private lateinit var logTextView: TextView
     private lateinit var logEmptyText: TextView
-    private lateinit var logAdapter: LogAdapter
     private var logsPaused = false
-    private var logFilter: String = "ALL"
+    private var logMinLevel: Char = 'V'
+    private val logSb = StringBuilder()
+    private var logStreamListener: ((com.neuralbridge.companion.log.LogStream.Line) -> Unit)? = null
 
     // Polling
     private val statusHandler = Handler(Looper.getMainLooper())
@@ -93,7 +95,7 @@ class MainActivity : Activity() {
         override fun run() {
             updateServiceStatus()
             updatePerformanceStats()
-            if (!logsPaused) updateLogEntries()
+            updateAllPermissionStatus()
             statusHandler.postDelayed(this, 1000)
         }
     }
@@ -108,6 +110,7 @@ class MainActivity : Activity() {
         setupTabs()
         setupMasterToggle()
         setupSetupTab()
+        setupServerConfig()
         setupLogsTab()
         updateDeviceInfo()
 
@@ -118,11 +121,13 @@ class MainActivity : Activity() {
         super.onResume()
         NeuralBridgeAccessibilityService.instance?.tryConsumeMediaProjectionConsent()
         updateAllPermissionStatus()
+        startLogStream()
         statusHandler.post(statusRunnable)
     }
 
     override fun onPause() {
         super.onPause()
+        stopLogStream()
         statusHandler.removeCallbacks(statusRunnable)
     }
 
@@ -165,7 +170,8 @@ class MainActivity : Activity() {
         permissionCardsContainer = findViewById(R.id.permissionCardsContainer)
 
         // Logs tab
-        logRecyclerView = findViewById(R.id.logRecyclerView)
+        logScrollView = findViewById(R.id.logScrollView)
+        logTextView = findViewById(R.id.logTextView)
         logEmptyText = findViewById(R.id.logEmptyText)
     }
 
@@ -255,8 +261,14 @@ class MainActivity : Activity() {
         }
 
         // Connection hero card
-        val httpPort = service?.getMcpHttpPort() ?: McpHttpServer.MCP_PORT
+        val httpPort = service?.getMcpHttpPort() ?: ServerConfig.getPort(this)
+        val hostMode = ServerConfig.getHostMode(this)
         val wifiIp = McpNetworkUtils.getWifiIpAddress(this) ?: "device-ip"
+        // Show the address a client would actually use for the configured bind mode.
+        val displayHost = when (hostMode) {
+            ServerConfig.HostMode.LOOPBACK -> "127.0.0.1"
+            else -> wifiIp
+        }
         if (!enabled) {
             connectionStatusIcon.text = "⬡"
             connectionStatusText.text = "NEURALBRIDGE IS OFF"
@@ -266,12 +278,12 @@ class MainActivity : Activity() {
             connectionStatusIcon.text = "📡"
             connectionStatusText.text = "CONNECTED"
             connectionStatusText.setTextColor(getColor(R.color.success))
-            connectionDetailText.text = "MCP: http://$wifiIp:$httpPort/mcp"
+            connectionDetailText.text = "MCP: http://$displayHost:$httpPort/mcp"
         } else {
             connectionStatusIcon.text = "📡"
             connectionStatusText.text = "WAITING FOR CONNECTION"
             connectionStatusText.setTextColor(getColor(R.color.text_medium_emphasis))
-            connectionDetailText.text = "MCP: http://$wifiIp:$httpPort/mcp"
+            connectionDetailText.text = "MCP: http://$displayHost:$httpPort/mcp"
         }
 
         // 3-up status grid
@@ -299,7 +311,7 @@ class MainActivity : Activity() {
             append("Screen: ${dm.widthPixels}x${dm.heightPixels} @ ${dm.densityDpi}dpi\n")
             append("Density: ${dm.density}x")
             val wifiIp3 = McpNetworkUtils.getWifiIpAddress(this@MainActivity) ?: "no wifi"
-            append("\nMCP: http://$wifiIp3:${McpHttpServer.MCP_PORT}/mcp")
+            append("\nMCP: http://$wifiIp3:${ServerConfig.getPort(this@MainActivity)}/mcp")
         }
         deviceInfoText.text = info
     }
@@ -342,7 +354,17 @@ class MainActivity : Activity() {
                     data = Uri.parse("package:$packageName")
                 })
             } catch (e: Exception) {
-                Log.w("MainActivity", "Battery optimization settings not available", e)
+                try {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        })
+                    } catch (err: Exception) {
+                        Log.w("MainActivity", "Battery optimization settings not available", err)
+                    }
+                }
             }
         }
         addPermissionCard("MediaProjection", "Enable fast screenshot capture (60ms)") {
@@ -397,58 +419,155 @@ class MainActivity : Activity() {
     }
 
     // ========================================================================
-    // Logs Tab
+    // Server Config (host mode + port)
+    // ========================================================================
+
+    private fun setupServerConfig() {
+        val hostSpinner = findViewById<Spinner>(R.id.hostModeSpinner)
+        val portInput = findViewById<EditText>(R.id.portInput)
+        val applyBtn = findViewById<Button>(R.id.btnApplyServerConfig)
+
+        // Host mode options, index-aligned with ServerConfig.HostMode ordinal order.
+        val modeLabels = arrayOf(
+            "All interfaces (0.0.0.0)",
+            "Wi-Fi / LAN IP only",
+            "Loopback (127.0.0.1)"
+        )
+        hostSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item, modeLabels
+        )
+
+        // Load current persisted values.
+        hostSpinner.setSelection(
+            when (ServerConfig.getHostMode(this)) {
+                ServerConfig.HostMode.ALL -> 0
+                ServerConfig.HostMode.LAN -> 1
+                ServerConfig.HostMode.LOOPBACK -> 2
+            }
+        )
+        portInput.setText(ServerConfig.getPort(this).toString())
+
+        applyBtn.setOnClickListener {
+            val mode = when (hostSpinner.selectedItemPosition) {
+                1 -> ServerConfig.HostMode.LAN
+                2 -> ServerConfig.HostMode.LOOPBACK
+                else -> ServerConfig.HostMode.ALL
+            }
+            val requested = portInput.text.toString().toIntOrNull()
+            if (requested == null || requested !in ServerConfig.MIN_PORT..ServerConfig.MAX_PORT) {
+                Toast.makeText(
+                    this,
+                    "Port must be ${ServerConfig.MIN_PORT}-${ServerConfig.MAX_PORT}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+
+            ServerConfig.setHostMode(this, mode)
+            val stored = ServerConfig.setPort(this, requested)
+            portInput.setText(stored.toString())
+
+            // Restart the server so the new bind host/port take effect (Ktor binds at start()).
+            val service = NeuralBridgeAccessibilityService.instance
+            if (service != null && masterToggle.isChecked) {
+                service.disable()
+                statusHandler.postDelayed({
+                    service.enable()
+                    updateServiceStatus()
+                    updateDeviceInfo()
+                }, 400)
+                Toast.makeText(this, "Server restarting on $stored…", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Saved. Enable NeuralBridge to apply.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ========================================================================
+    // Logs Tab — live streaming app logs (selectable + copyable)
     // ========================================================================
 
     private fun setupLogsTab() {
-        logAdapter = LogAdapter()
-        logRecyclerView.layoutManager = LinearLayoutManager(this)
-        logRecyclerView.adapter = logAdapter
-
-        // Filter spinner
+        // Level filter spinner (minimum level to show)
         val spinner = findViewById<Spinner>(R.id.logFilterSpinner)
-        val filters = arrayOf("ALL", "GESTURE", "OBSERVE", "MANAGE", "WAIT", "INPUT")
-        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, filters)
+        val levels = arrayOf("ALL", "DEBUG", "INFO", "WARN", "ERROR")
+        val levelChars = charArrayOf('V', 'D', 'I', 'W', 'E')
+        spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, levels)
         spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, pos: Int, id: Long) {
-                logFilter = filters[pos]
-                updateLogEntries()
+                logMinLevel = levelChars[pos]
+                rebuildLogView()
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
 
-        // Clear button
-        findViewById<Button>(R.id.btnClearLogs).setOnClickListener {
-            CommandLog.clear()
-            updateLogEntries()
+        // COPY — copies the full visible log buffer to the clipboard
+        findViewById<Button>(R.id.btnCopyLogs).setOnClickListener {
+            val text = logTextView.text?.toString() ?: ""
+            if (text.isEmpty()) {
+                Toast.makeText(this, "No logs to copy", Toast.LENGTH_SHORT).show()
+            } else {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("NeuralBridge logs", text))
+                Toast.makeText(this, "Copied ${text.length} chars", Toast.LENGTH_SHORT).show()
+            }
         }
 
-        // Pause/Resume button
+        // CLEAR — clears the in-memory log view
+        findViewById<Button>(R.id.btnClearLogs).setOnClickListener {
+            com.neuralbridge.companion.log.LogStream.clear()
+            rebuildLogView()
+        }
+
+        // PAUSE/RESUME — stops auto-append + auto-scroll (selection stays usable)
         val pauseBtn = findViewById<Button>(R.id.btnPauseLogs)
         pauseBtn.setOnClickListener {
             logsPaused = !logsPaused
             pauseBtn.text = if (logsPaused) "RESUME" else "PAUSE"
+            if (!logsPaused) rebuildLogView()
         }
     }
 
-    private fun updateLogEntries() {
-        var entries = CommandLog.getRecent(50)
-        if (logFilter != "ALL") {
-            val category = try { CommandLog.Category.valueOf(logFilter) } catch (e: Exception) { null }
-            if (category != null) {
-                entries = entries.filter { it.category == category }
+    /** Start tailing logs and register the live listener. */
+    private fun startLogStream() {
+        com.neuralbridge.companion.log.LogStream.start()
+        rebuildLogView()
+        val listener: (com.neuralbridge.companion.log.LogStream.Line) -> Unit = { line ->
+            if (!logsPaused && com.neuralbridge.companion.log.LogStream.rank(line.level) >=
+                    com.neuralbridge.companion.log.LogStream.rank(logMinLevel)) {
+                runOnUiThread { appendLogLine(line.raw) }
             }
         }
-        logAdapter.updateEntries(entries)
+        logStreamListener = listener
+        com.neuralbridge.companion.log.LogStream.addListener(listener)
+    }
 
-        val hasEntries = entries.isNotEmpty()
-        logRecyclerView.visibility = if (hasEntries) View.VISIBLE else View.GONE
-        logEmptyText.visibility = if (hasEntries) View.GONE else View.VISIBLE
+    private fun stopLogStream() {
+        logStreamListener?.let { com.neuralbridge.companion.log.LogStream.removeListener(it) }
+        logStreamListener = null
+    }
 
-        // Auto-scroll to top (newest entries first)
-        if (hasEntries && !logsPaused) {
-            logRecyclerView.scrollToPosition(0)
+    /** Append one live line and autoscroll to bottom (unless the user is selecting). */
+    private fun appendLogLine(raw: String) {
+        if (logSb.isNotEmpty()) logSb.append('\n')
+        logSb.append(raw)
+        // Trim if the on-screen buffer grows huge.
+        if (logSb.length > 200_000) logSb.delete(0, logSb.length - 150_000)
+        logTextView.text = logSb
+        logEmptyText.visibility = View.GONE
+        if (!logTextView.hasSelection()) {
+            logScrollView.post { logScrollView.fullScroll(View.FOCUS_DOWN) }
         }
+    }
+
+    /** Rebuild the full text view from the buffered snapshot at the current level filter. */
+    private fun rebuildLogView() {
+        val lines = com.neuralbridge.companion.log.LogStream.snapshot(logMinLevel)
+        logSb.setLength(0)
+        logSb.append(lines.joinToString("\n") { it.raw })
+        logTextView.text = logSb
+        logEmptyText.visibility = if (lines.isEmpty()) View.VISIBLE else View.GONE
+        logScrollView.post { logScrollView.fullScroll(View.FOCUS_DOWN) }
     }
 
     // ========================================================================

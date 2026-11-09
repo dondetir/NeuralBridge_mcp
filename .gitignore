@@ -47,6 +47,7 @@
 *.class
 *.jar
 !/gradle/wrapper/gradle-wrapper.jar
+!/android/gradle/wrapper/gradle-wrapper.jar
 
 # Signing files
 *.jks

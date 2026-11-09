@@ -5,7 +5,7 @@
     android:orientation="vertical"
     android:padding="@dimen/spacing_medium">
 
-    <!-- Filter Row -->
+    <!-- Controls Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -22,12 +22,12 @@
             android:paddingEnd="@dimen/spacing_small" />
 
         <Button
-            android:id="@+id/btnClearLogs"
+            android:id="@+id/btnCopyLogs"
             android:layout_width="wrap_content"
             android:layout_height="36dp"
             android:layout_marginStart="@dimen/spacing_small"
-            android:backgroundTint="@color/status_error"
-            android:text="CLEAR"
+            android:backgroundTint="@color/wave_purple"
+            android:text="COPY"
             android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
             android:textColor="@color/md_theme_light_onPrimary" />
 
@@ -41,28 +41,53 @@
             android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
             android:textColor="@color/md_theme_light_onPrimary" />
 
+        <Button
+            android:id="@+id/btnClearLogs"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="@dimen/spacing_small"
+            android:backgroundTint="@color/status_error"
+            android:text="CLEAR"
+            android:textAppearance="@style/TextAppearance.NeuralBridge.LabelMedium"
+            android:textColor="@color/md_theme_light_onPrimary" />
+
     </LinearLayout>
 
-    <!-- Log RecyclerView -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/logRecyclerView"
+    <!-- Live streaming log output: selectable + scrollable -->
+    <ScrollView
+        android:id="@+id/logScrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="@dimen/spacing_small"
         android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingBottom="@dimen/spacing_medium" />
+        android:background="@drawable/bg_card_wave"
+        android:fillViewport="true"
+        android:padding="@dimen/spacing_small"
+        android:scrollbars="vertical">
+
+        <TextView
+            android:id="@+id/logTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textSize="11sp"
+            android:textColor="@color/text_high_emphasis"
+            android:textIsSelectable="true"
+            android:text=""
+            android:typeface="monospace" />
+
+    </ScrollView>
 
     <!-- Empty State -->
     <TextView
         android:id="@+id/logEmptyText"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="No commands logged yet.\nExecute MCP commands to see activity here."
+        android:paddingTop="@dimen/spacing_medium"
+        android:text="Waiting for live logs…"
         android:textAppearance="@style/TextAppearance.NeuralBridge.BodyMedium"
         android:textColor="@color/text_medium_emphasis"
-        android:visibility="visible" />
+        android:visibility="gone" />
 
 </LinearLayout>

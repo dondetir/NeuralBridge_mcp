@@ -182,22 +182,48 @@ class InputEngine(
     }
 
     /**
-     * Set clipboard content
+     * Set clipboard content.
+     *
+     * On Android 10+ (API 29+) the system may silently reject clipboard writes from an
+     * app that is not the current input focus / default IME. We write on the main thread
+     * and read back to detect that case so callers aren't misled. Returns true only if
+     * the write was observable via a read-back. (Bug N1)
      */
-    fun setClipboardText(text: String) {
+    fun setClipboardText(text: String): Boolean {
         val clip = ClipData.newPlainText("", text)
-        clipboardManager.setPrimaryClip(clip)
-        Log.d(TAG, "Clipboard set: ${text.length} chars")
+        val latch = java.util.concurrent.CountDownLatch(1)
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            try { clipboardManager.setPrimaryClip(clip) } catch (e: Exception) {
+                Log.w(TAG, "setPrimaryClip threw: ${e.message}")
+            } finally { latch.countDown() }
+        }
+        latch.await(1, java.util.concurrent.TimeUnit.SECONDS)
+        val readBack = getClipboardText()
+        val ok = readBack == text
+        if (!ok) {
+            Log.w(TAG, "Clipboard write not confirmed on read-back (OS may restrict background clipboard writes). wanted=${text.length}chars got=${readBack?.length ?: -1}chars")
+        } else {
+            Log.d(TAG, "Clipboard set and verified: ${text.length} chars")
+        }
+        return ok
     }
 
     /**
-     * Press a key by name.
+     * Result of a key press. [success] means the action was accepted/dispatched;
+     * [verified] means we could confirm an observable effect (false = fire-and-forget,
+     * e.g. ACTION_IME_ENTER which the target app may map to a different editor action).
+     */
+    data class KeyResult(val success: Boolean, val mechanism: String, val verified: Boolean, val note: String? = null)
+
+    fun pressKey(keyName: String, focusedNode: AccessibilityNodeInfo?): Boolean =
+        pressKeyDetailed(keyName, focusedNode).success
+
+    /**
+     * Press a key by name, returning a detailed [KeyResult].
      *
      * Uses accessibility actions only (shell "input keyevent" requires INJECT_EVENTS permission).
-     * Supported: enter, delete/backspace, select_all, cut, copy, paste, escape.
-     * For arbitrary text, use inputText() instead.
      */
-    fun pressKey(keyName: String, focusedNode: AccessibilityNodeInfo?): Boolean {
+    fun pressKeyDetailed(keyName: String, focusedNode: AccessibilityNodeInfo?): KeyResult {
         Log.d(TAG, "Pressing key: $keyName")
         val key = keyName.lowercase()
 
@@ -207,22 +233,31 @@ class InputEngine(
                 if (focusedNode.performAction(
                         AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id
                     )) {
-                    Log.d(TAG, "Enter pressed via ACTION_IME_ENTER")
-                    return true
+                    Log.d(TAG, "Enter dispatched via ACTION_IME_ENTER")
+                    // IMPORTANT: acceptance of the action does NOT guarantee the app
+                    // committed a newline/submit — many composers bind IME_ACTION_SEND,
+                    // IME_ACTION_GO, etc. We cannot observe the downstream effect. (Bug N3)
+                    return KeyResult(
+                        success = true,
+                        mechanism = "ACTION_IME_ENTER",
+                        verified = false,
+                        note = "Dispatched; delivery not verifiable. The target field may bind a different IME action (send/go/next) so a newline/submit is not guaranteed."
+                    )
                 }
             }
-            // Pre-API 30 fallback: inject newline character
+            // Pre-API 30 fallback: inject newline character (this IS verifiable via text change)
             val currentText = focusedNode.text?.toString() ?: ""
             val args = Bundle().apply {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "$currentText\n")
             }
             if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
                 Log.d(TAG, "Enter simulated via newline append")
-                return true
+                return KeyResult(true, "ACTION_SET_TEXT(newline)", verified = true)
             }
+            return KeyResult(false, "enter", verified = false, note = "No enter mechanism accepted by the focused field.")
         }
 
-        // Delete/Backspace via text truncation
+        // Delete/Backspace via text truncation (verifiable)
         if ((key == "delete" || key == "backspace") && focusedNode != null) {
             val currentText = focusedNode.text?.toString() ?: ""
             if (currentText.isNotEmpty()) {
@@ -232,35 +267,36 @@ class InputEngine(
                 }
                 if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
                     Log.d(TAG, "Delete performed via ACTION_SET_TEXT")
-                    return true
+                    return KeyResult(true, "ACTION_SET_TEXT(truncate)", verified = true)
                 }
             } else {
                 Log.d(TAG, "Nothing to delete, field is empty")
-                return true
+                return KeyResult(true, "noop(empty)", verified = true, note = "Field already empty.")
             }
+            return KeyResult(false, "delete", verified = false)
         }
 
-        // Clipboard actions on focused node
+        // Clipboard / selection actions on focused node
         if (focusedNode != null) {
-            val clipAction = when (key) {
+            when (key) {
                 "select_all" -> {
                     val text = focusedNode.text?.toString()
-                    if (text != null) {
+                    return if (!text.isNullOrEmpty()) {
                         val args = Bundle().apply {
                             putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
                             putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, text.length)
                         }
-                        focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
-                    } else false
+                        val ok = focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
+                        KeyResult(ok, "ACTION_SET_SELECTION", verified = ok,
+                            note = if (!ok) "Field rejected selection." else null)
+                    } else {
+                        KeyResult(false, "select_all", verified = false,
+                            note = "No readable text in focused field — nothing to select.")
+                    }
                 }
-                "cut" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_CUT)
-                "copy" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_COPY)
-                "paste" -> focusedNode.performAction(AccessibilityNodeInfo.ACTION_PASTE)
-                else -> null
-            }
-            if (clipAction != null) {
-                Log.d(TAG, "Clipboard action '$key': $clipAction")
-                return clipAction
+                "cut" -> { val ok = focusedNode.performAction(AccessibilityNodeInfo.ACTION_CUT); return KeyResult(ok, "ACTION_CUT", ok) }
+                "copy" -> { val ok = focusedNode.performAction(AccessibilityNodeInfo.ACTION_COPY); return KeyResult(ok, "ACTION_COPY", ok) }
+                "paste" -> { val ok = focusedNode.performAction(AccessibilityNodeInfo.ACTION_PASTE); return KeyResult(ok, "ACTION_PASTE", ok) }
             }
         }
 
@@ -268,18 +304,11 @@ class InputEngine(
         if (key == "escape") {
             val result = accessibilityService.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
             Log.d(TAG, "Escape via GLOBAL_ACTION_BACK: $result")
-            return result
+            return KeyResult(result, "GLOBAL_ACTION_BACK", verified = result)
         }
 
         // Tab -> move focus forward
         if (key == "tab" && focusedNode != null) {
-            val args = Bundle().apply {
-                putInt(
-                    AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
-                    AccessibilityNodeInfo.MOVEMENT_GRANULARITY_LINE
-                )
-            }
-            // Try ACTION_NEXT_AT_MOVEMENT_GRANULARITY, then fall back to finding next focusable
             if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS)) {
                 val parent = focusedNode.parent
                 if (parent != null) {
@@ -290,26 +319,22 @@ class InputEngine(
                             if (foundCurrent && child.isFocusable) {
                                 val result = child.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
                                 Log.d(TAG, "Tab: moved focus to next sibling: $result")
-                                @Suppress("DEPRECATION")
-                                child.recycle()
-                                @Suppress("DEPRECATION")
-                                parent.recycle()
-                                return result
+                                @Suppress("DEPRECATION") child.recycle()
+                                @Suppress("DEPRECATION") parent.recycle()
+                                return KeyResult(result, "ACTION_FOCUS(next)", verified = result)
                             }
                             if (child == focusedNode) foundCurrent = true
-                            @Suppress("DEPRECATION")
-                            child.recycle()
+                            @Suppress("DEPRECATION") child.recycle()
                         }
                     }
-                    @Suppress("DEPRECATION")
-                    parent.recycle()
+                    @Suppress("DEPRECATION") parent.recycle()
                 }
             }
             Log.w(TAG, "Tab: could not find next focusable element")
-            return false
+            return KeyResult(false, "tab", verified = false, note = "No next focusable element found.")
         }
 
-        // Space -> type a space character into focused node
+        // Space -> type a space character into focused node (verifiable)
         if (key == "space" && focusedNode != null) {
             val currentText = focusedNode.text?.toString() ?: ""
             val args = Bundle().apply {
@@ -317,11 +342,12 @@ class InputEngine(
             }
             if (focusedNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
                 Log.d(TAG, "Space inserted via ACTION_SET_TEXT")
-                return true
+                return KeyResult(true, "ACTION_SET_TEXT(space)", verified = true)
             }
+            return KeyResult(false, "space", verified = false)
         }
 
         Log.w(TAG, "Key '$keyName' not supported via accessibility actions")
-        return false
+        return KeyResult(false, "unsupported", verified = false, note = "Key not supported via accessibility actions.")
     }
 }

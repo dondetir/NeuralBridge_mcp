@@ -17,6 +17,7 @@ import com.neuralbridge.companion.service.ScreenshotQuality
 import com.neuralbridge.companion.service.UiElement
 import com.neuralbridge.companion.service.UiTree
 import com.neuralbridge.companion.uitree.UiTreeWalker
+import com.neuralbridge.companion.web.WebViewController
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import android.accessibilityservice.GestureDescription
@@ -27,7 +28,8 @@ class McpToolHandler(
     private val gestureEngine: GestureEngine,
     private val uiTreeWalker: UiTreeWalker,
     private val inputEngine: InputEngine,
-    private val screenshotPipeline: ScreenshotPipeline
+    private val screenshotPipeline: ScreenshotPipeline,
+    private val webViewController: WebViewController
 ) {
     companion object {
         private const val TAG = "McpToolHandler"
@@ -67,6 +69,16 @@ class McpToolHandler(
                 "android_set_clipboard" -> handleSetClipboard(args)
                 "android_list_apps" -> handleListApps(args)
 
+                // INTENT / IPC
+                "android_start_activity" -> handleStartActivity(args)
+                "android_send_broadcast" -> handleSendBroadcast(args)
+                "android_start_service" -> handleStartService(args, foreground = false)
+                "android_start_foreground_service" -> handleStartService(args, foreground = true)
+                "android_query_content" -> handleQueryContent(args)
+
+                // SHELL (app-UID; NOT adb shell — see tool description)
+                "android_shell" -> handleShell(args)
+
                 // WAIT
                 "android_wait_for_element" -> handleWaitForElement(args)
                 "android_wait_for_gone" -> handleWaitForGone(args)
@@ -84,6 +96,18 @@ class McpToolHandler(
                 // TEST
                 "android_enable_events" -> handleEnableEvents(args)
                 "android_get_device_info" -> handleGetDeviceInfo()
+
+                // WEB (in-process WebView driver — operates only on the app's own WebView)
+                "web_navigate" -> handleWebNavigate(args)
+                "web_current_url" -> handleWebCurrentUrl()
+                "web_eval_js" -> handleWebEvalJs(args)
+                "web_query" -> handleWebQuery(args)
+                "web_click" -> handleWebClick(args)
+                "web_type" -> handleWebType(args)
+                "web_get_dom" -> handleWebGetDom(args)
+                "web_get_text" -> handleWebGetText(args)
+                "web_wait_for" -> handleWebWaitFor(args)
+                "web_screenshot" -> handleWebScreenshot(args)
 
                 else -> errorResult("Unknown tool: $toolName")
             }
@@ -461,10 +485,36 @@ class McpToolHandler(
         val endY = args["end_y"]?.jsonPrimitive?.intOrNull?.toFloat() ?: return errorResult("end_y required")
         val durationMs = args["duration_ms"]?.jsonPrimitive?.longOrNull ?: 300L
 
+        // Clamp the swipe path out of the system gesture-inset zones so a horizontal
+        // scroll (e.g. an app toolbar) is not captured by the back/recents/home
+        // gestures. (Bug B4) Without this, swipes near the left/right edges or the
+        // bottom strip bubble to the system overview instead of the app window.
+        val (cStartX, cStartY) = clampOutOfGestureInsets(startX, startY)
+        val (cEndX, cEndY) = clampOutOfGestureInsets(endX, endY)
+
         val success = withTimeoutOrNull(durationMs + 2000L) {
-            executeGestureAndWait { cb -> gestureEngine.executeSwipe(startX, startY, endX, endY, durationMs, cb) }
+            executeGestureAndWait { cb -> gestureEngine.executeSwipe(cStartX, cStartY, cEndX, cEndY, durationMs, cb) }
         } ?: false
         return if (success) textResult("{\"latency_ms\":0}") else errorResult("Swipe cancelled")
+    }
+
+    /**
+     * Clamp a point inward so it avoids Android's system gesture-inset regions:
+     *  - left/right edges  → back gesture
+     *  - bottom strip      → home/recents gesture
+     *  - top strip         → status bar / notification pull
+     * Uses a conservative inset derived from display density (~24dp edges, ~48dp bottom).
+     */
+    private fun clampOutOfGestureInsets(x: Float, y: Float): Pair<Float, Float> {
+        val dm = service.resources.displayMetrics
+        val edge = (24 * dm.density)
+        val bottom = (48 * dm.density)
+        val top = (24 * dm.density)
+        val w = dm.widthPixels.toFloat()
+        val h = dm.heightPixels.toFloat()
+        val cx = x.coerceIn(edge, (w - edge).coerceAtLeast(edge))
+        val cy = y.coerceIn(top, (h - bottom).coerceAtLeast(top))
+        return cx to cy
     }
 
     private suspend fun handlePinch(args: JsonObject): McpToolCallResult {
@@ -499,31 +549,40 @@ class McpToolHandler(
         val elementText = args["element_text"]?.jsonPrimitive?.contentOrNull
 
         val rootNode = service.rootInActiveWindow ?: return errorResult("No active window")
-        val tree = uiTreeWalker.walkTree(rootNode)
 
-        val target = if (resourceId != null || elementText != null) {
-            resolveSelector(tree, elementText, resourceId, null)
+        // Resolve the target editable node.
+        val nodeInfo: android.view.accessibility.AccessibilityNodeInfo = if (resourceId != null || elementText != null) {
+            // Selector given: resolve via UI tree, then re-locate the concrete node.
+            val tree = uiTreeWalker.walkTree(rootNode)
+            val target = resolveSelector(tree, elementText, resourceId, null)
                 ?: return errorResult("Element not found: resource_id=$resourceId, text=$elementText")
+            findNodeByElement(rootNode, target.resourceId, target.text)
+                ?: return errorResult("Could not get node reference for element: resource_id=$resourceId, text=$elementText")
         } else {
-            tree.elements.firstOrNull { e ->
-                e.focusable && (
-                    e.className?.contains("EditText") == true ||
-                    e.className?.contains("TextField") == true ||
-                    e.className == "android.widget.AutoCompleteTextView" ||
-                    e.className?.contains("SearchView") == true
-                )
-            }
-                ?: return errorResult("No editable element found. Specify resource_id or element_text")
+            // No selector: target the actually-focused input field directly.
+            // This handles id-less / text-less EditTexts (e.g. terminal/IME-backed inputs)
+            // that cannot be re-located by resource_id or text. (Bug B1)
+            rootNode.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
+                ?: run {
+                    // Fallback: first editable-looking node in the tree.
+                    val tree = uiTreeWalker.walkTree(rootNode)
+                    val guess = tree.elements.firstOrNull { e ->
+                        e.focusable && (
+                            e.className?.contains("EditText") == true ||
+                            e.className?.contains("TextField") == true ||
+                            e.className == "android.widget.AutoCompleteTextView" ||
+                            e.className?.contains("SearchView") == true
+                        )
+                    }
+                    if (guess != null) findNodeByElement(rootNode, guess.resourceId, guess.text) else null
+                }
+                ?: return errorResult("No focused input field found. Tap the field first, or specify resource_id or element_text.")
         }
-
-        // Walk node tree to find matching AccessibilityNodeInfo by resource ID or text
-        val nodeInfo = findNodeByElement(rootNode, target.resourceId, target.text)
-            ?: return errorResult("Could not get node reference for element")
 
         val success = inputEngine.inputText(nodeInfo, text, append)
         @Suppress("DEPRECATION")
         nodeInfo.recycle()
-        return if (success) textResult("{\"latency_ms\":0}") else errorResult("Input text failed")
+        return if (success) textResult("{\"latency_ms\":0}") else errorResult("Input text failed (field may reject programmatic input, e.g. a secure IME)")
     }
 
     private fun findNodeByElement(
@@ -563,11 +622,41 @@ class McpToolHandler(
         val focusedNode = service.rootInActiveWindow?.findFocus(
             android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT
         )
-        val success = inputEngine.pressKey(key, focusedNode)
+
+        // Keys that require a focused input field.
+        val focusRequiredKeys = setOf(
+            "enter", "delete", "backspace", "tab", "escape", "space",
+            "select_all", "cut", "copy", "paste"
+        )
+        if (key.lowercase() in focusRequiredKeys && focusedNode == null) {
+            return errorResult(
+                "Key '$key' requires a focused input field, but none is focused. " +
+                "Tap the input field first. Note: a secure IME (e.g. a password/terminal " +
+                "secure keyboard) may not expose focus to accessibility, in which case key " +
+                "injection is not possible — use set_clipboard + the app's paste affordance."
+            )
+        }
+
+        val result = inputEngine.pressKeyDetailed(key, focusedNode)
         @Suppress("DEPRECATION")
         focusedNode?.recycle()
-        return if (success) textResult("{\"key\":\"$key\",\"latency_ms\":0}")
-        else errorResult("Key '$key' not supported or no focused input field. Supported: back, home, recents, notifications, power (global); enter, delete/backspace, tab, escape, space, select_all, cut, copy, paste (requires focused field).")
+        if (!result.success) {
+            return errorResult(
+                "Key '$key' failed (${result.mechanism}): ${result.note ?: "rejected by focused field"}. " +
+                "Global keys: back, home, recents, notifications, power. " +
+                "Focused-field keys: enter, delete/backspace, tab, escape, space, select_all, cut, copy, paste."
+            )
+        }
+        // Report honestly: 'verified' distinguishes a confirmed effect from a
+        // fire-and-forget dispatch (e.g. ACTION_IME_ENTER). (Bug N3)
+        val json = buildJsonObject {
+            put("key", key)
+            put("mechanism", result.mechanism)
+            put("verified", result.verified)
+            result.note?.let { put("note", it) }
+            put("latency_ms", 0)
+        }
+        return textResult(json.toString())
     }
 
     private fun handleGlobalAction(args: JsonObject): McpToolCallResult {
@@ -616,10 +705,201 @@ class McpToolHandler(
         return textResult("{\"url\":\"$url\",\"latency_ms\":0}")
     }
 
+    // =====================================================================
+    // INTENT / IPC TOOLS (run at the app's own UID/permissions)
+    // =====================================================================
+
+    /** Build an Intent from common args: action, data(uri), mime_type, package, component, categories[], extras{}, flags[]. */
+    private fun buildIntentFromArgs(args: JsonObject): Intent {
+        val intent = Intent()
+        args["action"]?.jsonPrimitive?.contentOrNull?.let { intent.action = it }
+        val data = args["data"]?.jsonPrimitive?.contentOrNull
+        val mime = args["mime_type"]?.jsonPrimitive?.contentOrNull
+        if (data != null && mime != null) intent.setDataAndType(Uri.parse(data), mime)
+        else if (data != null) intent.data = Uri.parse(data)
+        else if (mime != null) intent.type = mime
+        val pkg = args["package"]?.jsonPrimitive?.contentOrNull
+        val component = args["component"]?.jsonPrimitive?.contentOrNull
+        if (component != null) {
+            // "pkg/cls" or "pkg/.cls"
+            val parts = component.split("/")
+            if (parts.size == 2) {
+                val p = parts[0]
+                val c = if (parts[1].startsWith(".")) p + parts[1] else parts[1]
+                intent.setClassName(p, c)
+            }
+        } else if (pkg != null) {
+            intent.setPackage(pkg)
+        }
+        args["categories"]?.jsonArray?.forEach { c ->
+            c.jsonPrimitive.contentOrNull?.let { intent.addCategory(it) }
+        }
+        // flags: array of ints (OR'd together)
+        args["flags"]?.jsonArray?.forEach { f ->
+            f.jsonPrimitive.intOrNull?.let { intent.addFlags(it) }
+        }
+        applyExtras(intent, args["extras"] as? JsonObject)
+        return intent
+    }
+
+    /** Apply typed extras. Each entry is {"type":"string|int|long|float|bool","value":...}, or a bare primitive (inferred). */
+    private fun applyExtras(intent: Intent, extras: JsonObject?) {
+        extras ?: return
+        for ((key, v) in extras) {
+            when (v) {
+                is JsonObject -> {
+                    val type = v["type"]?.jsonPrimitive?.contentOrNull?.lowercase()
+                    val value = v["value"]?.jsonPrimitive
+                    when (type) {
+                        "string" -> intent.putExtra(key, value?.contentOrNull)
+                        "int" -> value?.intOrNull?.let { intent.putExtra(key, it) }
+                        "long" -> value?.longOrNull?.let { intent.putExtra(key, it) }
+                        "float" -> value?.floatOrNull?.let { intent.putExtra(key, it) }
+                        "bool", "boolean" -> value?.booleanOrNull?.let { intent.putExtra(key, it) }
+                        else -> intent.putExtra(key, value?.contentOrNull)
+                    }
+                }
+                is JsonPrimitive -> {
+                    when {
+                        v.booleanOrNull != null && (v.content == "true" || v.content == "false") -> intent.putExtra(key, v.boolean)
+                        v.intOrNull != null -> intent.putExtra(key, v.int)
+                        v.longOrNull != null -> intent.putExtra(key, v.long)
+                        v.floatOrNull != null -> intent.putExtra(key, v.float)
+                        else -> intent.putExtra(key, v.contentOrNull)
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    private fun handleStartActivity(args: JsonObject): McpToolCallResult {
+        return try {
+            val intent = buildIntentFromArgs(args)
+            // Starting from a service context requires NEW_TASK.
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            service.startActivity(intent)
+            textResult("{\"success\":true,\"action\":\"${intent.action ?: ""}\"}")
+        } catch (e: Exception) {
+            errorResult("start_activity failed: ${e.message} (target may not be exported, require a permission the app lacks, or be blocked for background-activity-launch)")
+        }
+    }
+
+    private fun handleSendBroadcast(args: JsonObject): McpToolCallResult {
+        return try {
+            val intent = buildIntentFromArgs(args)
+            val permission = args["permission"]?.jsonPrimitive?.contentOrNull
+            if (permission != null) service.sendBroadcast(intent, permission)
+            else service.sendBroadcast(intent)
+            textResult("{\"success\":true,\"action\":\"${intent.action ?: ""}\"}")
+        } catch (e: Exception) {
+            errorResult("send_broadcast failed: ${e.message}")
+        }
+    }
+
+    private fun handleStartService(args: JsonObject, foreground: Boolean): McpToolCallResult {
+        return try {
+            val intent = buildIntentFromArgs(args)
+            if (foreground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                service.startForegroundService(intent)
+            } else {
+                service.startService(intent)
+            }
+            textResult("{\"success\":true,\"foreground\":$foreground}")
+        } catch (e: Exception) {
+            errorResult("start_service failed: ${e.message} (target service may not be exported or may require a permission the app lacks)")
+        }
+    }
+
+    private fun handleQueryContent(args: JsonObject): McpToolCallResult {
+        val uriStr = args["uri"]?.jsonPrimitive?.contentOrNull ?: return errorResult("uri required (e.g. content://...)")
+        val projection = args["projection"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }?.toTypedArray()
+        val selection = args["selection"]?.jsonPrimitive?.contentOrNull
+        val limit = args["limit"]?.jsonPrimitive?.intOrNull ?: 50
+        return try {
+            val cursor = service.contentResolver.query(Uri.parse(uriStr), projection, selection, null, null)
+                ?: return errorResult("query returned null (provider not accessible, not found, or permission denied)")
+            cursor.use { c ->
+                val cols = c.columnNames
+                val rows = buildJsonArray {
+                    var n = 0
+                    while (c.moveToNext() && n < limit) {
+                        add(buildJsonObject {
+                            for (i in cols.indices) {
+                                put(cols[i], try { c.getString(i) ?: "" } catch (e: Exception) { "<non-text>" })
+                            }
+                        })
+                        n++
+                    }
+                }
+                val result = buildJsonObject {
+                    putJsonArray("columns") { cols.forEach { add(JsonPrimitive(it)) } }
+                    put("rows", rows)
+                    put("returned", rows.size)
+                }
+                textResult(result.toString())
+            }
+        } catch (e: SecurityException) {
+            errorResult("query_content denied: ${e.message} (the app lacks permission to read this provider)")
+        } catch (e: Exception) {
+            errorResult("query_content failed: ${e.message}")
+        }
+    }
+
+    // =====================================================================
+    // SHELL TOOL
+    // =====================================================================
+
+    /**
+     * Run a command at the APP's UID (NOT the shell/root UID). This is an unprivileged
+     * app sandbox: `am`, `pm`, `settings`, `input`, `dumpsys`, reading other apps' data,
+     * etc. will fail with permission denied. For a real Android shell (shell UID) use
+     * `adb shell` over the device connection instead. Returned: stdout, stderr, exit code.
+     */
+    private suspend fun handleShell(args: JsonObject): McpToolCallResult {
+        val command = args["command"]?.jsonPrimitive?.contentOrNull ?: return errorResult("command required")
+        val timeoutMs = args["timeout_ms"]?.jsonPrimitive?.longOrNull ?: 10000L
+        return withContext(Dispatchers.IO) {
+            try {
+                val proc = ProcessBuilder("/system/bin/sh", "-c", command)
+                    .redirectErrorStream(false)
+                    .start()
+                val out = StringBuilder(); val err = StringBuilder()
+                val oT = Thread { proc.inputStream.bufferedReader().forEachLine { out.appendLine(it) } }
+                val eT = Thread { proc.errorStream.bufferedReader().forEachLine { err.appendLine(it) } }
+                oT.start(); eT.start()
+                val finished = proc.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+                if (!finished) { proc.destroyForcibly(); return@withContext errorResult("shell command timed out after ${timeoutMs}ms") }
+                oT.join(1000); eT.join(1000)
+                val code = proc.exitValue()
+                val cap = 8000
+                val result = buildJsonObject {
+                    put("exit_code", code)
+                    put("stdout", out.toString().let { if (it.length > cap) it.substring(0, cap) + "\n<truncated>" else it }.trimEnd())
+                    put("stderr", err.toString().let { if (it.length > cap) it.substring(0, cap) + "\n<truncated>" else it }.trimEnd())
+                    put("uid_note", "runs as app UID (unprivileged); am/pm/settings/input require adb shell")
+                }
+                textResult(result.toString())
+            } catch (e: Exception) {
+                errorResult("shell exec failed: ${e.message}")
+            }
+        }
+    }
+
     private fun handleSetClipboard(args: JsonObject): McpToolCallResult {
         val text = args["text"]?.jsonPrimitive?.contentOrNull ?: return errorResult("text required")
-        inputEngine.setClipboardText(text)
-        return textResult("{\"success\":true}")
+        val verified = inputEngine.setClipboardText(text)
+        return if (verified) {
+            textResult("{\"success\":true,\"verified\":true}")
+        } else {
+            // Honest failure: the OS likely rejected a background clipboard write.
+            errorResult(
+                "Clipboard write could not be confirmed (read-back mismatch). On Android 10+, " +
+                "the system restricts clipboard writes from apps that are not the focused app / " +
+                "default IME, so a stale value may remain. Bring the field to focus, or type " +
+                "directly with input_text instead of relying on clipboard+paste."
+            )
+        }
     }
 
     private fun handleListApps(args: JsonObject): McpToolCallResult {
@@ -813,17 +1093,135 @@ class McpToolHandler(
 
     private fun handleGetDeviceInfo(): McpToolCallResult {
         val dm = service.resources.displayMetrics
+        val real = realDisplaySize()
         val result = buildJsonObject {
             put("manufacturer", Build.MANUFACTURER)
             put("model", Build.MODEL)
             put("android_version", Build.VERSION.RELEASE)
             put("sdk_int", Build.VERSION.SDK_INT)
+            // App-content area (excludes system bars).
             put("screen_width", dm.widthPixels)
             put("screen_height", dm.heightPixels)
+            // Real full display frame — this is the coordinate space that UI-tree
+            // bounds (getBoundsInScreen) and tap/swipe gestures (dispatchGesture)
+            // actually use. Use these for pixel-ratio hit-testing. (Bug B5)
+            put("display_width", real.first)
+            put("display_height", real.second)
             put("density_dpi", dm.densityDpi)
             put("density", dm.density)
         }
         return textResult(result.toString())
     }
+
+    /**
+     * Real full-display size in pixels, including system decoration — the frame that
+     * accessibility bounds and dispatchGesture coordinates are expressed in.
+     */
+    private fun realDisplaySize(): Pair<Int, Int> {
+        return try {
+            val wm = service.getSystemService(android.view.WindowManager::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val b = wm.currentWindowMetrics.bounds
+                b.width() to b.height()
+            } else {
+                val dm = service.resources.displayMetrics
+                dm.widthPixels to dm.heightPixels
+            }
+        } catch (e: Exception) {
+            val dm = service.resources.displayMetrics
+            dm.widthPixels to dm.heightPixels
+        }
+    }
+
+    // =====================================================================
+    // WEB TOOLS (in-process WebView — operates only on the app's own WebView)
+    // =====================================================================
+
+    private suspend fun handleWebNavigate(args: JsonObject): McpToolCallResult {
+        val url = args["url"]?.jsonPrimitive?.contentOrNull ?: return errorResult("url required")
+        val timeoutMs = args["timeout_ms"]?.jsonPrimitive?.longOrNull ?: 30000L
+        val result = webViewController.navigate(url, timeoutMs)
+        val json = buildJsonObject {
+            put("success", result.success)
+            put("url", result.url ?: url)
+            result.errorMessage?.let { put("error", it) }
+            put("title", webViewController.title() ?: "")
+        }
+        return if (result.success) textResult(json.toString())
+        else McpToolCallResult(content = listOf(McpContentBlock(type = "text", text = json.toString())), isError = true)
+    }
+
+    private suspend fun handleWebCurrentUrl(): McpToolCallResult {
+        val result = buildJsonObject {
+            put("url", webViewController.currentUrl() ?: "")
+            put("title", webViewController.title() ?: "")
+        }
+        return textResult(result.toString())
+    }
+
+    private suspend fun handleWebEvalJs(args: JsonObject): McpToolCallResult {
+        val script = args["script"]?.jsonPrimitive?.contentOrNull ?: return errorResult("script required")
+        val raw = webViewController.evaluate(script)
+        val result = buildJsonObject { put("result", raw) }
+        return textResult(result.toString())
+    }
+
+    private suspend fun handleWebQuery(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull ?: return errorResult("selector required")
+        val all = args["all"]?.jsonPrimitive?.booleanOrNull ?: false
+        val elementsJson = webViewController.query(selector, all)
+        // elementsJson is already a JSON array string produced in-page; embed verbatim.
+        return textResult("{\"selector\":${jsonString(selector)},\"elements\":$elementsJson}")
+    }
+
+    private suspend fun handleWebClick(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull ?: return errorResult("selector required")
+        val clicked = webViewController.click(selector)
+        return textResult("{\"found\":$clicked}")
+    }
+
+    private suspend fun handleWebType(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull ?: return errorResult("selector required")
+        val text = args["text"]?.jsonPrimitive?.contentOrNull ?: return errorResult("text required")
+        val ok = webViewController.type(selector, text)
+        return if (ok) textResult("{\"success\":true}") else errorResult("Element not found or not editable: $selector")
+    }
+
+    private suspend fun handleWebGetDom(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull
+        val maxChars = args["max_chars"]?.jsonPrimitive?.intOrNull ?: 20000
+        val dom = webViewController.getDom(selector, maxChars)
+            ?: return errorResult("No element matched selector: $selector")
+        return textResult(dom)
+    }
+
+    private suspend fun handleWebGetText(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull
+        val maxChars = args["max_chars"]?.jsonPrimitive?.intOrNull ?: 20000
+        val text = webViewController.getText(selector, maxChars)
+            ?: return errorResult("No element matched selector: $selector")
+        return textResult(text)
+    }
+
+    private suspend fun handleWebWaitFor(args: JsonObject): McpToolCallResult {
+        val selector = args["selector"]?.jsonPrimitive?.contentOrNull ?: return errorResult("selector required")
+        val timeoutMs = args["timeout_ms"]?.jsonPrimitive?.longOrNull ?: 5000L
+        val found = webViewController.waitFor(selector, timeoutMs)
+        return textResult("{\"found\":$found,\"timeout_ms\":$timeoutMs}")
+    }
+
+    private suspend fun handleWebScreenshot(args: JsonObject): McpToolCallResult {
+        val quality = args["quality"]?.jsonPrimitive?.intOrNull ?: 80
+        val bytes = webViewController.screenshot(quality)
+            ?: return errorResult("WebView not initialized or capture failed")
+        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        return McpToolCallResult(content = listOf(
+            McpContentBlock(type = "image", data = base64, mimeType = "image/jpeg"),
+            McpContentBlock(type = "text", text = "{\"format\":\"jpeg\"}")
+        ))
+    }
+
+    /** Encode a Kotlin string as a JSON string literal for safe embedding in a response. */
+    private fun jsonString(s: String): String = JsonPrimitive(s).toString()
 
 }

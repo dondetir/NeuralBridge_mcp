@@ -18,6 +18,7 @@ import com.neuralbridge.companion.R
 import com.neuralbridge.companion.gesture.GestureEngine
 import com.neuralbridge.companion.input.InputEngine
 import com.neuralbridge.companion.uitree.UiTreeWalker
+import com.neuralbridge.companion.web.WebViewController
 import com.neuralbridge.companion.screenshot.ScreenshotPipeline
 import com.neuralbridge.companion.mcp.McpHttpServer
 import com.neuralbridge.companion.mcp.McpToolHandler
@@ -70,6 +71,7 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
     private lateinit var inputEngine: InputEngine
     private lateinit var uiTreeWalker: UiTreeWalker
     private lateinit var screenshotPipeline: ScreenshotPipeline
+    private lateinit var webViewController: WebViewController
 
     // MCP HTTP server
     private var mcpHttpServer: McpHttpServer? = null
@@ -130,6 +132,7 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
         inputEngine = InputEngine(this)
         uiTreeWalker = UiTreeWalker(this)
         screenshotPipeline = ScreenshotPipeline(this, serviceScope)
+        webViewController = WebViewController(this)
 
         // Update notification when MediaProjection session is lost by the system
         screenshotPipeline.onMediaProjectionLost = {
@@ -149,11 +152,14 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
             gestureEngine = gestureEngine,
             uiTreeWalker = uiTreeWalker,
             inputEngine = inputEngine,
-            screenshotPipeline = screenshotPipeline
+            screenshotPipeline = screenshotPipeline,
+            webViewController = webViewController
         )
         val server = McpHttpServer(
             context = this,
-            toolHandler = toolHandler
+            toolHandler = toolHandler,
+            port = com.neuralbridge.companion.mcp.ServerConfig.getPort(this),
+            bindHost = com.neuralbridge.companion.mcp.ServerConfig.resolveBindHost(this)
         )
         mcpHttpServer = server
         serviceScope.launch {
@@ -187,7 +193,46 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Request MediaProjection permission for fast screenshot capture
+     * Promote the foreground service to include the MEDIA_PROJECTION type.
+     *
+     * Android 14+ (API 34) requires an active foreground service of type
+     * `mediaProjection` BEFORE MediaProjectionManager.getMediaProjection() is
+     * called, otherwise it throws:
+     *   SecurityException: Media projections require a foreground service of type
+     *   ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+     *
+     * We re-call startForeground with SPECIAL_USE | MEDIA_PROJECTION so the single
+     * FGS satisfies both the AccessibilityService's special-use requirement and the
+     * MediaProjection requirement. Must be invoked on the main thread immediately
+     * before building the projection. Returns true if the promotion succeeded.
+     */
+    fun promoteForegroundForMediaProjection(): Boolean {
+        return try {
+            createNotificationChannel()
+            val notification = buildNotification(
+                title = getString(R.string.foreground_service_title),
+                message = "Screen capture active"
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            Log.i(TAG, "FGS promoted to include MEDIA_PROJECTION type")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to promote FGS to MEDIA_PROJECTION type", e)
+            false
+        }
+    }
+
+    /**
+     * Request MediaProjection permission for fast screenshot capture.
      *
      * This is called on service startup to pre-request permission so that
      * screenshots use the fast path (60ms) instead of AccessibilityService fallback (~200-400ms).
@@ -364,7 +409,10 @@ class NeuralBridgeAccessibilityService : AccessibilityService() {
             screenshotPipeline.cleanup()
         }
 
-        // Stop MCP HTTP server synchronously to release port 7474
+        // Tear down the in-process WebView and detach its overlay window
+        if (::webViewController.isInitialized) {
+            webViewController.destroy()
+        }
         runBlocking(Dispatchers.IO) {
             try {
                 mcpHttpServer?.stop()

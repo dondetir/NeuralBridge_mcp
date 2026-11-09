@@ -45,6 +45,61 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
+        <!-- Server Configuration -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_medium"
+            android:text="MCP SERVER"
+            android:textAppearance="@style/TextAppearance.NeuralBridge.LabelLarge"
+            android:textColor="@color/wave_purple"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:text="Bind interface"
+            android:textColor="@color/text_medium_emphasis" />
+
+        <Spinner
+            android:id="@+id/hostModeSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:text="Port (1024-65535)"
+            android:textColor="@color/text_medium_emphasis" />
+
+        <EditText
+            android:id="@+id/portInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:inputType="number"
+            android:maxLength="5"
+            android:hint="7474" />
+
+        <Button
+            android:id="@+id/btnApplyServerConfig"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:text="APPLY &amp; RESTART SERVER" />
+
+        <TextView
+            android:id="@+id/serverConfigHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_small"
+            android:textColor="@color/text_medium_emphasis"
+            android:textSize="12sp"
+            android:text="LAN binds to the current Wi-Fi IP. Loopback (127.0.0.1) is reachable only via adb forward." />
+
     </LinearLayout>
 
 </ScrollView>
