@@ -25,11 +25,20 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Repair Gradle wrapper
+        working-directory: android
+        run: |
+          curl -fL https://services.gradle.org/distributions/gradle-8.13-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          mkdir -p gradle/wrapper
+          /tmp/gradle-8.13/bin/gradle wrapper --gradle-version 8.13 --distribution-type bin
+          test -s gradle/wrapper/gradle-wrapper.jar
+          test -s gradle/wrapper/gradle-wrapper.properties
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
           accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: false
 
       - name: Install CMake
         run: sdkmanager "cmake;3.22.1"
